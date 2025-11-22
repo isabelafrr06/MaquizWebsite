@@ -1,0 +1,152 @@
+.protected-image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: auto;
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+/* In carousel context, make it absolute to fill the slide */
+.carousel-slide .protected-image-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.protected-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.3s ease;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.watermark-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 100px,
+    rgba(255, 255, 255, 0.03) 100px,
+    rgba(255, 255, 255, 0.03) 200px
+  );
+  z-index: 2;
+}
+
+.watermark-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  font-size: 4rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.3);
+  text-shadow: 
+    2px 2px 8px rgba(0, 0, 0, 0.6),
+    0 0 30px rgba(0, 0, 0, 0.4),
+    0 0 60px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  white-space: nowrap;
+  letter-spacing: 15px;
+  z-index: 3;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+/* Additional watermark patterns */
+.watermark-overlay::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.watermark-overlay::after {
+  content: '';
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Prevent image zoom on double-click */
+.protected-image-container {
+  touch-action: none;
+  -ms-touch-action: none;
+}
+
+/* Disable text selection on the container */
+.protected-image-container * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Ensure image fills container in carousel */
+.carousel-image .protected-image {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none;
+  max-height: none;
+}
+
+/* Hide watermark for no-watermark class */
+.no-watermark .watermark-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .watermark-text {
+    font-size: 2rem;
+    letter-spacing: 4px;
+  }
+}
+

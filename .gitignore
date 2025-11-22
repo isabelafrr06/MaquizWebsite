@@ -18,6 +18,10 @@ frontend/.vite
 .env.local
 .env.*.local
 
+# Rails credentials - Contains sensitive credentials (DO NOT COMMIT)
+backend/config/master.key
+backend/config/credentials/*.key
+
 # Database seeds credentials - Contains sensitive credentials (DO NOT COMMIT)
 backend/db/seeds_credentials.rb
 

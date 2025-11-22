@@ -132,21 +132,33 @@ end
 puts "Created #{Artwork.count} artworks by Magaly Quirós Cruz (Maquiz)"
 
 # Create admin user
-# Credentials can come from:
-# 1. Environment variables (for Railway/production) - ADMIN_EMAIL, ADMIN_PASSWORD
-# 2. seeds_credentials.rb file (for local development) - ADMIN_CREDENTIALS hash
+# Credentials can come from (in priority order):
+# 1. Rails encrypted credentials (Rails.credentials.admin) - Recommended
+# 2. Environment variables (for Railway/production) - ADMIN_EMAIL, ADMIN_PASSWORD
+# 3. seeds_credentials.rb file (for local development) - ADMIN_CREDENTIALS hash
 Admin.destroy_all
 
 admin_email = nil
 admin_password = nil
 
-# Try environment variables first (for Railway/production)
-if ENV['ADMIN_EMAIL'].present? && ENV['ADMIN_PASSWORD'].present?
+# Try Rails encrypted credentials first (recommended)
+begin
+  if Rails.application.credentials.admin.present?
+    admin_email = Rails.application.credentials.admin[:email]
+    admin_password = Rails.application.credentials.admin[:password]
+    puts "Using credentials from Rails encrypted credentials"
+  end
+rescue => e
+  # Credentials file might not exist yet, that's okay
+end
+
+# Fallback to environment variables (for Railway/production)
+if admin_email.blank? && ENV['ADMIN_EMAIL'].present? && ENV['ADMIN_PASSWORD'].present?
   admin_email = ENV['ADMIN_EMAIL']
   admin_password = ENV['ADMIN_PASSWORD']
   puts "Using credentials from environment variables"
 # Fallback to local credentials file (for local development)
-elsif File.exist?(Rails.root.join('db', 'seeds_credentials.rb'))
+elsif admin_email.blank? && File.exist?(Rails.root.join('db', 'seeds_credentials.rb'))
   begin
     require_relative 'seeds_credentials'
     if defined?(ADMIN_CREDENTIALS)
@@ -170,16 +182,23 @@ else
   puts "Warning: Admin credentials not found"
   puts "Skipping admin user creation."
   puts ""
-  puts "For local development, create backend/db/seeds_credentials.rb:"
+  puts "Recommended: Use Rails encrypted credentials:"
+  puts "  bundle exec rails credentials:edit"
+  puts "  Add:"
+  puts "    admin:"
+  puts "      email: your-email@example.com"
+  puts "      password: your-password"
+  puts ""
+  puts "Alternative 1: Set environment variables (Railway):"
+  puts "  ADMIN_EMAIL=your-email@example.com"
+  puts "  ADMIN_PASSWORD=your-password"
+  puts ""
+  puts "Alternative 2: Create backend/db/seeds_credentials.rb:"
   puts "  ADMIN_CREDENTIALS = {"
   puts "    email: 'your-email@example.com',"
   puts "    password: 'your-password',"
   puts "    password_confirmation: 'your-password'"
   puts "  }"
-  puts ""
-  puts "For Railway/production, set environment variables:"
-  puts "  ADMIN_EMAIL=your-email@example.com"
-  puts "  ADMIN_PASSWORD=your-password"
 end
 
 # Portfolio Events

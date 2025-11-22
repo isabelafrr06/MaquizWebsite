@@ -4,7 +4,10 @@ This guide explains how to deploy to Railway with a public GitHub repository whi
 
 ## How It Works
 
-The application uses **environment variables** for sensitive credentials, which Railway can set securely without committing them to git.
+The application supports multiple methods for credentials (in priority order):
+1. **Rails encrypted credentials** (Recommended) - Uses `RAILS_MASTER_KEY` environment variable
+2. **Environment variables** - `ADMIN_EMAIL` and `ADMIN_PASSWORD`
+3. **Local credentials file** - For local development only
 
 ## Setup Steps
 
@@ -23,11 +26,31 @@ The application uses **environment variables** for sensitive credentials, which 
 3. Connect your GitHub repository
 4. Railway will automatically detect it's a Rails app
 
-### 3. Set Environment Variables in Railway
+### 3. Set Credentials in Railway
 
-In your Railway project dashboard:
+You have two options:
 
-1. Go to **Variables** tab
+#### Option A: Rails Encrypted Credentials (Recommended)
+
+1. In Railway dashboard, go to **Variables** tab
+2. Add this environment variable:
+
+```
+RAILS_MASTER_KEY=your-master-key-content
+```
+
+To get your master key:
+```bash
+cat backend/config/master.key
+```
+
+Copy the entire content and paste it as the value.
+
+The encrypted credentials file (`config/credentials.yml.enc`) is already in your repo, and Railway will use the master key to decrypt it.
+
+#### Option B: Environment Variables
+
+1. In Railway dashboard, go to **Variables** tab
 2. Add these environment variables:
 
 ```
@@ -35,14 +58,14 @@ ADMIN_EMAIL=your-admin-email@example.com
 ADMIN_PASSWORD=your-secure-password
 ```
 
-**Important:** These are stored securely by Railway and never exposed in your code or git history.
+**Important:** All credentials are stored securely by Railway and never exposed in your code or git history.
 
 ### 4. Database Setup
 
 Railway will automatically:
 - Run `rails db:create` (if needed)
 - Run `rails db:migrate` 
-- Run `rails db:seed` (which will use the ADMIN_EMAIL and ADMIN_PASSWORD env vars)
+- Run `rails db:seed` (which will automatically use Rails credentials or environment variables)
 
 ### 5. Local Development
 
@@ -67,14 +90,16 @@ bundle exec rails db:seed
 
 ## Environment Variables Reference
 
-### Required for Railway:
+### Option 1: Rails Credentials (Recommended)
+- `RAILS_MASTER_KEY` - Master key to decrypt `config/credentials.yml.enc`
+
+### Option 2: Direct Environment Variables
 - `ADMIN_EMAIL` - Admin user email
 - `ADMIN_PASSWORD` - Admin user password
 
-### Optional (if you have other secrets):
-- `DATABASE_URL` - Railway sets this automatically
-- `RAILS_MASTER_KEY` - For encrypted credentials (if using)
-- Any other API keys or secrets
+### Automatic (Railway sets these):
+- `DATABASE_URL` - Database connection string
+- `RAILS_ENV` - Environment (production)
 
 ## Verification
 
@@ -95,8 +120,9 @@ railway logs
 ```
 
 Look for:
-- "Using credentials from environment variables" ✅ Good
-- "Warning: Admin credentials not found" ❌ Check env vars
+- "Using credentials from Rails encrypted credentials" ✅ Best (using master key)
+- "Using credentials from environment variables" ✅ Good (using env vars)
+- "Warning: Admin credentials not found" ❌ Check credentials setup
 
 ### Seeds not running?
 
@@ -107,7 +133,10 @@ Railway should run seeds automatically. If not:
 ## Summary
 
 - ✅ Public GitHub repo is safe
-- ✅ Use Railway environment variables for credentials
-- ✅ Local development can use `seeds_credentials.rb` file
+- ✅ Recommended: Use Rails encrypted credentials with `RAILS_MASTER_KEY`
+- ✅ Alternative: Use `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables
+- ✅ Local development can use Rails credentials or `seeds_credentials.rb` file
 - ✅ No secrets in your code or git history
+- ✅ `config/credentials.yml.enc` is safe to commit (encrypted)
+- ✅ `config/master.key` is gitignored (never commit)
 

@@ -71,6 +71,11 @@ Railway should auto-detect, but verify:
 2. Wait for deployment to complete
 3. Check logs to ensure migrations and seeds ran successfully
 
+**Important**: If migrations don't run automatically:
+- Check the **"Release"** phase logs in Railway dashboard
+- If needed, run migrations manually: `railway run rails db:migrate`
+- See `backend/RAILWAY_TROUBLESHOOTING.md` for detailed troubleshooting
+
 ### Step 6: Get Your Backend URL
 
 1. In Railway, go to your service

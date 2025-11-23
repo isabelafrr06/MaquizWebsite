@@ -29,19 +29,14 @@ export const LanguageProvider = ({ children }) => {
       refreshTextsCache(initialLanguage)
         .then((data) => {
           if (data && typeof data === 'object' && Object.keys(data).length > 0) {
-            console.log('✅ Database texts loaded successfully for', initialLanguage)
-            console.log('Sample keys in cache:', Object.keys(data).slice(0, 10))
-            console.log('Example: home.heroTitle =', data.home?.heroTitle || 'NOT FOUND')
             setTextsLoaded(true)
             // Force a re-render by updating state so components use database texts
           } else {
-            console.warn('⚠️ No database texts found or empty response, using static translations')
-            console.log('Response was:', data)
             setTextsLoaded(true)
           }
         })
         .catch((err) => {
-          console.error('❌ Error fetching initial texts cache:', err)
+          console.error('Error fetching initial texts cache:', err)
           setTextsLoaded(true)
         })
     }
@@ -56,7 +51,6 @@ export const LanguageProvider = ({ children }) => {
         refreshTextsCache(language)
           .then((data) => {
             if (data) {
-              console.log('Database texts loaded for', language)
               // Force a re-render by updating a state that components can use
               setTextsLoaded(true)
             }

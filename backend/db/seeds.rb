@@ -1,7 +1,5 @@
-# Categories
-Category.destroy_all
-
-puts "Creating categories..."
+# Categories - Only create if they don't exist (idempotent)
+puts "Setting up categories..."
 categories_data = [
   {
     name: 'Acrílico',
@@ -46,11 +44,14 @@ categories_data = [
 ]
 
 categories_data.each do |cat_data|
-  category = Category.create!(
-    name: cat_data[:name],
-    translations: cat_data[:translations]
-  )
-  puts "Created category: #{category.name}"
+  category = Category.find_or_create_by!(name: cat_data[:name]) do |cat|
+    cat.translations = cat_data[:translations]
+  end
+  # Update translations if category already existed
+  if category.persisted? && category.translations != cat_data[:translations]
+    category.update!(translations: cat_data[:translations])
+  end
+  puts category.persisted? ? "Category exists: #{category.name}" : "Created category: #{category.name}"
 end
 
 puts "Created #{Category.count} categories"
@@ -115,8 +116,9 @@ else
   puts "Artist profile already exists"
 end
 
-# Artworks by Magaly Quirós Cruz (Maquiz)
-Artwork.destroy_all
+# Artworks - Only seed if database is empty (don't destroy existing artworks)
+if Artwork.count == 0
+  puts "\nNo artworks found, creating seed artworks..."
 
 
 artworks = [
@@ -189,7 +191,10 @@ artworks.each do |artwork_data|
   end
 end
 
-puts "Created #{Artwork.count} artworks by Magaly Quirós Cruz (Maquiz)"
+  puts "Created #{Artwork.count} artworks by Magaly Quirós Cruz (Maquiz)"
+else
+  puts "\nArtworks already exist (#{Artwork.count} total), skipping seed artworks"
+end
 
 # Create admin user
 # Credentials can come from (in priority order):
@@ -273,10 +278,9 @@ else
   puts "  }"
 end
 
-# Portfolio Events
-PortfolioEvent.destroy_all
-
-puts "\nCreating portfolio events..."
+# Portfolio Events - Only seed if database is empty (don't destroy existing events)
+if PortfolioEvent.count == 0
+  puts "\nNo portfolio events found, creating seed events..."
 
 # Individual Exhibitions
 individual_exhibitions = [
@@ -673,10 +677,13 @@ publications.each do |event_data|
   puts "Created publication: #{event.title}"
 end
 
-puts "\nCreated #{PortfolioEvent.count} portfolio events"
+  puts "\nCreated #{PortfolioEvent.count} portfolio events"
+else
+  puts "\nPortfolio events already exist (#{PortfolioEvent.count} total), skipping seed events"
+end
 
-# Site Texts - Import from translation files
-SiteText.destroy_all
+# Site Texts - Only create if they don't exist (idempotent)
+puts "\nSetting up site texts..."
 
 puts "\nCreating site texts..."
 
@@ -773,7 +780,7 @@ descriptions = {
   'products.note' => 'Products page - Note text'
 }
 
-# Create site texts
+# Create site texts - only create if they don't exist (idempotent)
 all_keys.each do |key|
   translations_hash = {
     'es' => translations_data['es'][key],
@@ -781,13 +788,17 @@ all_keys.each do |key|
     'it' => translations_data['it'][key]
   }
   
-  SiteText.create!(
-    key: key,
-    description: descriptions[key] || "Text for #{key}",
-    translations: translations_hash
-  )
+  site_text = SiteText.find_or_create_by!(key: key) do |text|
+    text.description = descriptions[key] || "Text for #{key}"
+    text.translations = translations_hash
+  end
   
-  puts "Created text: #{key}"
+  # Update translations if text already existed but translations changed
+  if site_text.persisted? && site_text.translations != translations_hash
+    site_text.update!(translations: translations_hash)
+  end
+  
+  puts site_text.persisted? ? "Text exists: #{key}" : "Created text: #{key}"
 end
 
 puts "\nCreated #{SiteText.count} site texts"

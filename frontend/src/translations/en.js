@@ -141,7 +141,10 @@ export const translations = {
     manageArtworks: 'Manage Artworks',
     manageTexts: 'Manage Texts',
     manageCarousel: 'Manage Carousel',
-    addArtwork: 'Add Artwork'
+    addArtwork: 'Add Artwork',
+    required: 'Required',
+    optional: 'Optional',
+    translations: 'Translations'
   }
 }
 

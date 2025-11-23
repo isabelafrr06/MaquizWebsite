@@ -141,7 +141,10 @@ export const translations = {
     manageArtworks: 'Gestionar Obras',
     manageTexts: 'Gestionar Textos',
     manageCarousel: 'Gestionar Carrusel',
-    addArtwork: 'Agregar Obra'
+    addArtwork: 'Agregar Obra',
+    required: 'Requerido',
+    optional: 'Opcional',
+    translations: 'Traducciones'
   }
 }
 

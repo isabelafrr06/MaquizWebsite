@@ -55,6 +55,16 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_22_173200) do
   create_table "artist_profiles", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "name"
+    t.string "artistic_name"
+    t.string "birthdate"
+    t.string "country"
+    t.string "email"
+    t.string "phone"
+    t.string "technique"
+    t.string "location"
+    t.text "bio"
+    t.jsonb "translations", default: {}
   end
 
   create_table "artworks", force: :cascade do |t|
@@ -118,6 +128,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_22_173200) do
     t.text "description"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "hidden", default: false, null: false
+    t.index ["hidden"], name: "index_site_texts_on_hidden"
     t.index ["key"], name: "index_site_texts_on_key", unique: true
     t.index ["translations"], name: "index_site_texts_on_translations", using: :gin
   end

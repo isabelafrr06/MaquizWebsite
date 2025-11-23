@@ -333,22 +333,21 @@ function AdminDashboard() {
     }
   }
 
-  const handleDeleteText = async (key) => {
-    if (!window.confirm(language === 'en' ? 'Are you sure you want to delete this text?' : language === 'it' ? 'Sei sicuro di voler eliminare questo testo?' : '¿Estás seguro de que quieres eliminar este texto?')) {
-      return
-    }
-
+  const handleToggleTextHidden = async (text) => {
     try {
       const token = localStorage.getItem('adminToken')
-      await axios.delete(`/api/v1/admin/texts/${encodeURIComponent(key)}`, {
+      const newHiddenValue = !(text.hidden === true)
+      await axios.put(`/api/v1/admin/texts/${encodeURIComponent(text.key)}`, {
+        hidden: newHiddenValue
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      // Refresh texts cache after deleting
+      // Refresh texts cache after updating
       await refreshTextsCache()
       fetchTexts()
     } catch (error) {
-      console.error('Error deleting text:', error)
-      alert(language === 'en' ? 'Error deleting text' : language === 'it' ? 'Errore nell\'eliminare il testo' : 'Error al eliminar el texto')
+      console.error('Error toggling text visibility:', error)
+      alert(language === 'en' ? 'Error updating text visibility' : language === 'it' ? 'Errore nell\'aggiornare la visibilità del testo' : 'Error al actualizar la visibilidad del texto')
     }
   }
 
@@ -413,7 +412,7 @@ function AdminDashboard() {
       case 'logs':
         return language === 'en' ? 'Logs' : language === 'it' ? 'Registri' : 'Registros'
       case 'artistProfile':
-        return language === 'en' ? 'Artist Photo' : language === 'it' ? 'Foto Artista' : 'Foto del Artista'
+        return language === 'en' ? 'Artist Profile' : language === 'it' ? 'Profilo Artista' : 'Perfil del Artista'
       default:
         return t('admin.dashboard')
     }
@@ -421,13 +420,13 @@ function AdminDashboard() {
 
   const allTabs = useMemo(() => [
     { id: 'artworks', name: getTranslation(language, 'admin.artworks'), requiresAdmin: false },
+    { id: 'artistProfile', name: language === 'en' ? 'Artist Profile' : language === 'it' ? 'Profilo Artista' : 'Perfil del Artista', requiresAdmin: true },
     { id: 'texts', name: getTranslation(language, 'admin.texts'), requiresAdmin: true },
     { id: 'carousel', name: getTranslation(language, 'admin.carousel'), requiresAdmin: true },
     { id: 'events', name: language === 'en' ? 'Events' : language === 'it' ? 'Eventi' : 'Eventos', requiresAdmin: true },
     { id: 'categories', name: language === 'en' ? 'Categories' : language === 'it' ? 'Categorie' : 'Categorías', requiresAdmin: true },
     { id: 'users', name: language === 'en' ? 'Users' : language === 'it' ? 'Utenti' : 'Usuarios', requiresAdmin: true },
-    { id: 'logs', name: language === 'en' ? 'Logs' : language === 'it' ? 'Registri' : 'Registros', requiresAdmin: true },
-    { id: 'artistProfile', name: language === 'en' ? 'Artist Photo' : language === 'it' ? 'Foto Artista' : 'Foto del Artista', requiresAdmin: true }
+    { id: 'logs', name: language === 'en' ? 'Logs' : language === 'it' ? 'Registri' : 'Registros', requiresAdmin: true }
   ], [language])
 
   const tabs = useMemo(() => {
@@ -612,8 +611,20 @@ function AdminDashboard() {
               <>
                 <div className="admin-section-header">
                   <h2>{t('admin.manageTexts')}</h2>
-                  <button onClick={() => { setEditingText(null); setShowTextForm(true) }} className="admin-add-btn">
-                    + {language === 'en' ? 'Add Text' : language === 'it' ? 'Aggiungi Testo' : 'Agregar Texto'}
+                  <button 
+                    onClick={async () => {
+                      try {
+                        await refreshTextsCache(language)
+                        alert(language === 'en' ? 'Texts cache refreshed! Changes will be visible on the public site.' : language === 'it' ? 'Cache testi aggiornato! Le modifiche saranno visibili sul sito pubblico.' : '¡Caché de textos actualizado! Los cambios serán visibles en el sitio público.')
+                      } catch (error) {
+                        console.error('Error refreshing cache:', error)
+                        alert(language === 'en' ? 'Error refreshing cache' : language === 'it' ? 'Errore nell\'aggiornamento della cache' : 'Error al actualizar la caché')
+                      }
+                    }}
+                    className="admin-refresh-btn"
+                    style={{ marginLeft: '10px' }}
+                  >
+                    {language === 'en' ? '🔄 Refresh Cache' : language === 'it' ? '🔄 Aggiorna Cache' : '🔄 Actualizar Caché'}
                   </button>
                 </div>
                 {showTextForm && (
@@ -626,7 +637,7 @@ function AdminDashboard() {
                 <TextsList
                   texts={texts}
                   onEdit={(text) => { setEditingText(text); setShowTextForm(true) }}
-                  onDelete={handleDeleteText}
+                  onToggleHidden={handleToggleTextHidden}
                 />
               </>
             )}
@@ -803,7 +814,6 @@ function AdminDashboard() {
                   <AccessDeniedMessage />
                 ) : (
                   <>
-                    <h2>{language === 'en' ? 'Artist Photo' : language === 'it' ? 'Foto Artista' : 'Foto del Artista'}</h2>
                     <ArtistProfileManager />
                   </>
                 )}
@@ -1541,38 +1551,100 @@ function CarouselManager({ artworks, onUpdate }) {
   )
 }
 
-function TextsList({ texts, onEdit, onDelete }) {
+function TextsList({ texts, onEdit, onToggleHidden }) {
   const { language } = useLanguage()
+
+  // Form labels and button texts that should not be editable
+  const nonEditableKeys = [
+    // Navigation (button/links)
+    'nav.home', 'nav.gallery', 'nav.products', 'nav.about', 'nav.contact',
+    // Admin panel (form labels and buttons)
+    'admin.loginTitle', 'admin.loginSubtitle', 'admin.email', 'admin.password', 'admin.login',
+    'admin.backToSite', 'admin.dashboard', 'admin.logout', 'admin.artworks', 'admin.texts',
+    'admin.carousel', 'admin.manageArtworks', 'admin.manageTexts', 'admin.manageCarousel',
+    'admin.addArtwork', 'admin.required', 'admin.optional', 'admin.translations',
+    // Footer (links/labels)
+    'footer.copyright', 'footer.tagline', 'footer.quickLinks', 'footer.followUs', 'footer.adminLogin',
+    // Contact form labels and buttons
+    'contact.title', 'contact.name', 'contact.subject', 'contact.message', 'contact.send', 'contact.email', 'contact.location', 'contact.follow',
+    // About section labels (form field labels)
+    'about.artisticName', 'about.birthdate', 'about.country', 'about.technique', 'about.location',
+    'about.contact', 'about.email', 'about.phone', 'about.exhibitions', 'about.individual',
+    'about.duo', 'about.collective', 'about.awards', 'about.publications', 'about.upcoming', 'about.philosophy',
+    // Gallery UI labels/buttons
+    'gallery.title', 'gallery.allCategories', 'gallery.forSale',
+    // Products UI labels/buttons
+    'products.forSale', 'products.price',
+    // Artist info (moved to Artist Profile section)
+    'artist.name', 'artist.artisticName', 'artist.birthdate', 'artist.country', 'artist.email',
+    'artist.phone', 'artist.technique', 'artist.location', 'artist.bio', 'artist.quote',
+    'artist.artisticFocus.title', 'artist.artisticFocus.style1.title', 'artist.artisticFocus.style1.description',
+    'artist.artisticFocus.style2.title', 'artist.artisticFocus.style2.description',
+    'artist.artisticFocus.style3.title', 'artist.artisticFocus.style3.description'
+  ]
+
+  // Filter out non-editable texts - show all editable texts always (including hidden ones)
+  const editableTexts = texts.filter(text => !nonEditableKeys.includes(text.key))
 
   return (
     <div className="texts-list">
-      {texts.length === 0 ? (
-        <p className="no-items">{language === 'en' ? 'No texts found' : language === 'it' ? 'Nessun testo trovato' : 'No se encontraron textos'}</p>
+      {editableTexts.length === 0 ? (
+        <p className="no-items">{language === 'en' ? 'No editable texts found' : language === 'it' ? 'Nessun testo modificabile trovato' : 'No se encontraron textos editables'}</p>
       ) : (
-        <div className="texts-grid-admin">
-          {texts.map(text => (
-            <div key={text.key} className="text-item-admin">
-              <div className="text-details-admin">
-                <h3>{text.key}</h3>
-                {text.description && (
-                  <p className="text-description">{text.description}</p>
-                )}
-                <div className="text-preview">
-                  <strong>{language === 'en' ? 'Preview' : language === 'it' ? 'Anteprima' : 'Vista previa'}:</strong>
-                  <p>{text.translations?.[language] || text.translations?.es || '(No translation)'}</p>
+        <>
+          <div className="texts-grid-admin">
+            {editableTexts.map(text => {
+              const translationContent = text.translations?.[language]?.content || text.translations?.[language] || text.translations?.es?.content || text.translations?.es || '(No translation)'
+              return (
+                <div key={text.key} className="text-item-admin" style={text.hidden === true ? { 
+                  border: '2px dashed #ff9800',
+                  background: '#fff3e0',
+                  position: 'relative'
+                } : {}}>
+                  {text.hidden === true && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px',
+                      background: '#ff9800',
+                      color: 'white',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold'
+                    }}>
+                      {language === 'en' ? 'HIDDEN FROM SITE' : language === 'it' ? 'NASCOSTO DAL SITO' : 'OCULTO DEL SITIO'}
+                    </div>
+                  )}
+                  <div className="text-details-admin">
+                    <h3>{text.key}</h3>
+                    {text.description && (
+                      <p className="text-description">{text.description}</p>
+                    )}
+                    <div className="text-preview">
+                      <strong>{language === 'en' ? 'Preview' : language === 'it' ? 'Anteprima' : 'Vista previa'}:</strong>
+                      <p>{translationContent}</p>
+                    </div>
+                  </div>
+                  <div className="text-actions">
+                    <button onClick={() => onEdit(text)} className="edit-btn">
+                      {language === 'en' ? 'Edit' : language === 'it' ? 'Modifica' : 'Editar'}
+                    </button>
+                    <button 
+                      onClick={() => onToggleHidden(text)} 
+                      className={`hide-btn ${text.hidden === true ? 'show-on-site' : ''}`}
+                    >
+                      {text.hidden === true 
+                        ? (language === 'en' ? 'Show on Site' : language === 'it' ? 'Mostra sul Sito' : 'Mostrar en el Sitio')
+                        : (language === 'en' ? 'Hide from Site' : language === 'it' ? 'Nascondi dal Sito' : 'Ocultar del Sitio')
+                      }
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="text-actions">
-                <button onClick={() => onEdit(text)} className="edit-btn">
-                  {language === 'en' ? 'Edit' : language === 'it' ? 'Modifica' : 'Editar'}
-                </button>
-                <button onClick={() => onDelete(text.key)} className="delete-btn">
-                  {language === 'en' ? 'Delete' : language === 'it' ? 'Elimina' : 'Eliminar'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+              )
+            })}
+          </div>
+        </>
       )}
     </div>
   )
@@ -1582,6 +1654,12 @@ function TextForm({ text, onClose, onSave }) {
   const { language } = useLanguage()
   const [activeLangTab, setActiveLangTab] = useState('es')
   const availableLanguages = ['es', 'en', 'it']
+  
+  // Prevent creating new texts - only allow editing existing ones
+  if (!text) {
+    onClose()
+    return null
+  }
   
   const initTranslations = () => {
     if (text?.translations) {
@@ -1625,10 +1703,14 @@ function TextForm({ text, onClose, onSave }) {
 
     try {
       const token = localStorage.getItem('adminToken')
-      const url = text
-        ? `/api/v1/admin/texts/${encodeURIComponent(text.key)}`
-        : '/api/v1/admin/texts'
-      const method = text ? 'put' : 'post'
+      // Only allow updating existing texts, not creating new ones
+      if (!text || !text.key) {
+        alert(language === 'en' ? 'Cannot create new texts. Only editing existing texts is allowed.' : language === 'it' ? 'Non è possibile creare nuovi testi. È consentita solo la modifica di testi esistenti.' : 'No se pueden crear nuevos textos. Solo se permite editar textos existentes.')
+        return
+      }
+      
+      const url = `/api/v1/admin/texts/${encodeURIComponent(text.key)}`
+      const method = 'put'
 
       const submitData = new FormData()
       
@@ -1658,7 +1740,7 @@ function TextForm({ text, onClose, onSave }) {
     <div className="artwork-form-overlay">
       <div className="artwork-form-modal">
         <div className="artwork-form-header">
-          <h2>{text ? (language === 'en' ? 'Edit Text' : language === 'it' ? 'Modifica Testo' : 'Editar Texto') : (language === 'en' ? 'Add Text' : language === 'it' ? 'Aggiungi Testo' : 'Agregar Texto')}</h2>
+          <h2>{language === 'en' ? 'Edit Text' : language === 'it' ? 'Modifica Testo' : 'Editar Texto'}</h2>
           <button onClick={onClose} className="close-btn">×</button>
         </div>
         <form onSubmit={handleSubmit} className="artwork-form">
@@ -1670,12 +1752,10 @@ function TextForm({ text, onClose, onSave }) {
               value={formData.key}
               onChange={handleChange}
               required
-              disabled={!!text}
+              disabled={true}
               placeholder="home.quote"
             />
-            {text && (
-              <small>{language === 'en' ? 'Key cannot be changed after creation' : language === 'it' ? 'La chiave non può essere modificata dopo la creazione' : 'La clave no puede cambiarse después de la creación'}</small>
-            )}
+            <small>{language === 'en' ? 'Key cannot be changed' : language === 'it' ? 'La chiave non può essere modificata' : 'La clave no puede cambiarse'}</small>
           </div>
 
           <div className="form-group">
@@ -1737,12 +1817,69 @@ function TextForm({ text, onClose, onSave }) {
 
 function ArtistProfileManager() {
   const { language } = useLanguage()
+  const t = (key) => getTranslation(language, key)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [preview, setPreview] = useState(null)
   const [selectedFile, setSelectedFile] = useState(null)
   const fileInputRef = useRef(null)
+  const [activeLangTab, setActiveLangTab] = useState('es')
+  const availableLanguages = ['es', 'en', 'it']
+  
+  // Initialize translations from profile or empty
+  const initTranslations = () => {
+    if (!profile) {
+      return {
+        es: { name: '', artistic_name: '', birthdate: '', country: '', email: '', phone: '', technique: '', location: '', bio: '' },
+        en: { name: '', artistic_name: '', birthdate: '', country: '', email: '', phone: '', technique: '', location: '', bio: '' },
+        it: { name: '', artistic_name: '', birthdate: '', country: '', email: '', phone: '', technique: '', location: '', bio: '' }
+      }
+    }
+    
+    // Handle translations - can be object or null/undefined
+    const translations = profile.translations || {}
+    
+    return {
+      es: {
+        name: translations.es?.name || translations['es']?.name || profile.name || '',
+        artistic_name: translations.es?.artistic_name || translations['es']?.artistic_name || profile.artistic_name || '',
+        birthdate: translations.es?.birthdate || translations['es']?.birthdate || profile.birthdate || '',
+        country: translations.es?.country || translations['es']?.country || profile.country || '',
+        email: translations.es?.email || translations['es']?.email || profile.email || '',
+        phone: translations.es?.phone || translations['es']?.phone || profile.phone || '',
+        technique: translations.es?.technique || translations['es']?.technique || profile.technique || '',
+        location: translations.es?.location || translations['es']?.location || profile.location || '',
+        bio: translations.es?.bio || translations['es']?.bio || profile.bio || ''
+      },
+      en: {
+        name: translations.en?.name || translations['en']?.name || '',
+        artistic_name: translations.en?.artistic_name || translations['en']?.artistic_name || '',
+        birthdate: translations.en?.birthdate || translations['en']?.birthdate || '',
+        country: translations.en?.country || translations['en']?.country || '',
+        email: translations.en?.email || translations['en']?.email || '',
+        phone: translations.en?.phone || translations['en']?.phone || '',
+        technique: translations.en?.technique || translations['en']?.technique || '',
+        location: translations.en?.location || translations['en']?.location || '',
+        bio: translations.en?.bio || translations['en']?.bio || ''
+      },
+      it: {
+        name: translations.it?.name || translations['it']?.name || '',
+        artistic_name: translations.it?.artistic_name || translations['it']?.artistic_name || '',
+        birthdate: translations.it?.birthdate || translations['it']?.birthdate || '',
+        country: translations.it?.country || translations['it']?.country || '',
+        email: translations.it?.email || translations['it']?.email || '',
+        phone: translations.it?.phone || translations['it']?.phone || '',
+        technique: translations.it?.technique || translations['it']?.technique || '',
+        location: translations.it?.location || translations['it']?.location || '',
+        bio: translations.it?.bio || translations['it']?.bio || ''
+      }
+    }
+  }
+  
+  const [translations, setTranslations] = useState(initTranslations())
+  const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
     fetchProfile()
@@ -1765,6 +1902,31 @@ function ArtistProfileManager() {
     }
   }
 
+  useEffect(() => {
+    if (profile) {
+      const newTranslations = initTranslations()
+      setTranslations(newTranslations)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile])
+
+  const handleEdit = () => {
+    setIsEditing(true)
+  }
+
+  const handleCancel = () => {
+    setIsEditing(false)
+    // Reset translations to original profile values
+    if (profile) {
+      const newTranslations = initTranslations()
+      setTranslations(newTranslations)
+    }
+    setSelectedFile(null)
+    if (profile?.photo_url) {
+      setPreview(profile.photo_url)
+    }
+  }
+
   const handleFileChange = (e) => {
     const file = e.target.files[0]
     if (file) {
@@ -1777,24 +1939,42 @@ function ArtistProfileManager() {
     }
   }
 
+  const handleTranslationChange = (lang, field, value) => {
+    setTranslations(prev => ({
+      ...prev,
+      [lang]: {
+        ...prev[lang],
+        [field]: value
+      }
+    }))
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
-    if (!selectedFile && !profile?.photo_url) {
-      alert(language === 'en' ? 'Please select a photo to upload' : language === 'it' ? 'Seleziona una foto da caricare' : 'Por favor selecciona una foto para subir')
-      return
-    }
-
-    setUploading(true)
+    setSaving(true)
 
     try {
       const token = localStorage.getItem('adminToken')
       const formData = new FormData()
       
+      // Add photo if selected
       if (selectedFile) {
         formData.append('photo', selectedFile)
       }
+
+      // Add base fields from Spanish translations (default)
+      formData.append('name', translations.es.name || '')
+      formData.append('artistic_name', translations.es.artistic_name || '')
+      formData.append('birthdate', translations.es.birthdate || '')
+      formData.append('country', translations.es.country || '')
+      formData.append('email', translations.es.email || '')
+      formData.append('phone', translations.es.phone || '')
+      formData.append('technique', translations.es.technique || '')
+      formData.append('location', translations.es.location || '')
+      formData.append('bio', translations.es.bio || '')
+      
+      // Add translations JSON
+      formData.append('translations', JSON.stringify(translations))
 
       await axios.put('/api/v1/admin/artist_profile', formData, {
         headers: {
@@ -1803,16 +1983,18 @@ function ArtistProfileManager() {
         }
       })
 
-      alert(language === 'en' ? 'Photo updated successfully!' : language === 'it' ? 'Foto aggiornata con successo!' : '¡Foto actualizada exitosamente!')
+      alert(language === 'en' ? 'Profile updated successfully!' : language === 'it' ? 'Profilo aggiornato con successo!' : '¡Perfil actualizado exitosamente!')
       setSelectedFile(null)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
+      setIsEditing(false)
       fetchProfile()
     } catch (error) {
-      console.error('Error updating photo:', error)
-      alert(language === 'en' ? 'Error updating photo' : language === 'it' ? 'Errore nell\'aggiornare la foto' : 'Error al actualizar la foto')
+      console.error('Error updating profile:', error)
+      alert(language === 'en' ? 'Error updating profile' : language === 'it' ? 'Errore nell\'aggiornare il profilo' : 'Error al actualizar el perfil')
     } finally {
+      setSaving(false)
       setUploading(false)
     }
   }
@@ -1848,52 +2030,257 @@ function ArtistProfileManager() {
 
   return (
     <div className="artist-profile-manager">
-      <div className="profile-preview">
-        {preview || profile?.photo_url ? (
-          <img src={preview || profile.photo_url} alt="Artist" className="profile-preview-image" />
-        ) : (
-          <div className="profile-placeholder">
-            <div className="profile-placeholder-initials">MQ</div>
-            <p>{language === 'en' ? 'No photo uploaded' : language === 'it' ? 'Nessuna foto caricata' : 'No hay foto cargada'}</p>
-          </div>
-        )}
-      </div>
-
-      <form onSubmit={handleSubmit} className="profile-form">
-        <div className="form-group">
-          <label htmlFor="artist-photo-input" className="file-input-label">
-            {language === 'en' ? 'Choose Photo' : language === 'it' ? 'Scegli Foto' : 'Elegir Foto'}
-          </label>
-          <input
-            type="file"
-            id="artist-photo-input"
-            ref={fileInputRef}
-            accept="image/*"
-            onChange={handleFileChange}
-            className="file-input"
-          />
-          {selectedFile && (
-            <p className="file-selected-text">
-              {language === 'en' ? 'Selected: ' : language === 'it' ? 'Selezionato: ' : 'Seleccionado: '}
-              {selectedFile.name}
-            </p>
-          )}
-        </div>
-
-        <div className="form-actions">
-          <button type="submit" className="save-btn" disabled={uploading || (!selectedFile && !profile?.photo_url)}>
-            {uploading 
-              ? (language === 'en' ? 'Uploading...' : language === 'it' ? 'Caricamento...' : 'Subiendo...')
-              : (language === 'en' ? 'Upload Photo' : language === 'it' ? 'Carica Foto' : 'Subir Foto')
-            }
-          </button>
-          {profile?.photo_attached && (
-            <button type="button" onClick={handleRemove} className="delete-btn">
-              {language === 'en' ? 'Remove Photo' : language === 'it' ? 'Rimuovi Foto' : 'Eliminar Foto'}
+      {!isEditing ? (
+        <div className="profile-view">
+          <div className="profile-header">
+            <h2>{language === 'en' ? 'Artist Profile' : language === 'it' ? 'Profilo Artista' : 'Perfil del Artista'}</h2>
+            <button onClick={handleEdit} className="admin-edit-btn">
+              {language === 'en' ? 'Edit' : language === 'it' ? 'Modifica' : 'Editar'}
             </button>
-          )}
+          </div>
+
+          <div className="profile-preview-section">
+            <div className="profile-preview">
+              {profile?.photo_url ? (
+                <img src={profile.photo_url} alt="Artist" className="profile-preview-image" />
+              ) : (
+                <div className="profile-placeholder">
+                  <div className="profile-placeholder-initials">MQ</div>
+                  <p>{language === 'en' ? 'No photo uploaded' : language === 'it' ? 'Nessuna foto caricata' : 'No hay foto cargada'}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Language Tabs for Viewing */}
+          <div className="translation-tabs">
+            <div className="translation-tabs-header">
+              <span className="translation-label">{t('admin.translations')}:</span>
+              {availableLanguages.map(lang => (
+                <button
+                  key={lang}
+                  type="button"
+                  className={`translation-tab ${activeLangTab === lang ? 'active' : ''}`}
+                  onClick={() => setActiveLangTab(lang)}
+                >
+                  {lang.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            
+            {availableLanguages.map(lang => (
+              <div key={lang} className={`translation-content ${activeLangTab === lang ? 'active' : ''}`}>
+                <div className="profile-info-view">
+                  <div className="info-row">
+                    <span className="info-label">{language === 'en' ? 'Name' : language === 'it' ? 'Nome' : 'Nombre'}:</span>
+                    <span className="info-value">{translations[lang]?.name || '-'}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'en' ? 'Artistic Name' : language === 'it' ? 'Nome Artistico' : 'Nombre Artístico'}:</span>
+                    <span className="info-value">{translations[lang]?.artistic_name || '-'}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'en' ? 'Birthdate' : language === 'it' ? 'Data di Nascita' : 'Fecha de Nacimiento'}:</span>
+                    <span className="info-value">{translations[lang]?.birthdate || '-'}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'en' ? 'Country' : language === 'it' ? 'Paese' : 'País'}:</span>
+                    <span className="info-value">{translations[lang]?.country || '-'}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'en' ? 'Email' : language === 'it' ? 'Email' : 'Correo Electrónico'}:</span>
+                    <span className="info-value">{translations[lang]?.email || '-'}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'en' ? 'Phone' : language === 'it' ? 'Telefono' : 'Teléfono'}:</span>
+                    <span className="info-value">{translations[lang]?.phone || '-'}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'en' ? 'Technique' : language === 'it' ? 'Tecnica' : 'Técnica'}:</span>
+                    <span className="info-value">{translations[lang]?.technique || '-'}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'en' ? 'Location' : language === 'it' ? 'Posizione' : 'Ubicación'}:</span>
+                    <span className="info-value">{translations[lang]?.location || '-'}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'en' ? 'Bio' : language === 'it' ? 'Biografia' : 'Biografía'}:</span>
+                    <span className="info-value bio-value">{translations[lang]?.bio || '-'}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </form>
+      ) : (
+        <form onSubmit={handleSubmit} className="profile-form">
+          <div className="profile-header">
+            <h2>{language === 'en' ? 'Edit Artist Profile' : language === 'it' ? 'Modifica Profilo Artista' : 'Editar Perfil del Artista'}</h2>
+            <button type="button" onClick={handleCancel} className="cancel-btn">
+              {language === 'en' ? 'Cancel' : language === 'it' ? 'Annulla' : 'Cancelar'}
+            </button>
+          </div>
+
+          <div className="profile-preview-section">
+            <div className="profile-preview">
+              {preview || profile?.photo_url ? (
+                <img src={preview || profile.photo_url} alt="Artist" className="profile-preview-image" />
+              ) : (
+                <div className="profile-placeholder">
+                  <div className="profile-placeholder-initials">MQ</div>
+                  <p>{language === 'en' ? 'No photo uploaded' : language === 'it' ? 'Nessuna foto caricata' : 'No hay foto cargada'}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="artist-photo-input" className="file-input-label">
+                {language === 'en' ? 'Choose Photo' : language === 'it' ? 'Scegli Foto' : 'Elegir Foto'}
+              </label>
+              <input
+                type="file"
+                id="artist-photo-input"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleFileChange}
+                className="file-input"
+              />
+              {selectedFile && (
+                <p className="file-selected-text">
+                  {language === 'en' ? 'Selected: ' : language === 'it' ? 'Selezionato: ' : 'Seleccionado: '}
+                  {selectedFile.name}
+                </p>
+              )}
+              {profile?.photo_attached && (
+                <button type="button" onClick={handleRemove} className="delete-btn" style={{ marginTop: '10px' }}>
+                  {language === 'en' ? 'Remove Photo' : language === 'it' ? 'Rimuovi Foto' : 'Eliminar Foto'}
+                </button>
+              )}
+            </div>
+          </div>
+
+        {/* Language Tabs for Translations */}
+        <div className="translation-tabs">
+          <div className="translation-tabs-header">
+            <span className="translation-label">{t('admin.translations')}:</span>
+            {availableLanguages.map(lang => (
+              <button
+                key={lang}
+                type="button"
+                className={`translation-tab ${activeLangTab === lang ? 'active' : ''}`}
+                onClick={() => setActiveLangTab(lang)}
+              >
+                {lang.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          
+          {availableLanguages.map(lang => (
+            <div key={lang} className={`translation-content ${activeLangTab === lang ? 'active' : ''}`}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>{language === 'en' ? 'Name' : language === 'it' ? 'Nome' : 'Nombre'} ({lang.toUpperCase()})</label>
+                  <input
+                    type="text"
+                    value={translations[lang]?.name || ''}
+                    onChange={(e) => handleTranslationChange(lang, 'name', e.target.value)}
+                    required={lang === 'es'}
+                    placeholder={lang === 'es' ? t('admin.required') : t('admin.optional')}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>{language === 'en' ? 'Artistic Name' : language === 'it' ? 'Nome Artistico' : 'Nombre Artístico'} ({lang.toUpperCase()})</label>
+                  <input
+                    type="text"
+                    value={translations[lang]?.artistic_name || ''}
+                    onChange={(e) => handleTranslationChange(lang, 'artistic_name', e.target.value)}
+                    placeholder={t('admin.optional')}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>{language === 'en' ? 'Birthdate' : language === 'it' ? 'Data di Nascita' : 'Fecha de Nacimiento'} ({lang.toUpperCase()})</label>
+                  <input
+                    type="text"
+                    value={translations[lang]?.birthdate || ''}
+                    onChange={(e) => handleTranslationChange(lang, 'birthdate', e.target.value)}
+                    placeholder={t('admin.optional')}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>{language === 'en' ? 'Country' : language === 'it' ? 'Paese' : 'País'} ({lang.toUpperCase()})</label>
+                  <input
+                    type="text"
+                    value={translations[lang]?.country || ''}
+                    onChange={(e) => handleTranslationChange(lang, 'country', e.target.value)}
+                    placeholder={t('admin.optional')}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>{language === 'en' ? 'Email' : language === 'it' ? 'Email' : 'Correo Electrónico'} ({lang.toUpperCase()})</label>
+                  <input
+                    type="email"
+                    value={translations[lang]?.email || ''}
+                    onChange={(e) => handleTranslationChange(lang, 'email', e.target.value)}
+                    placeholder={t('admin.optional')}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>{language === 'en' ? 'Phone' : language === 'it' ? 'Telefono' : 'Teléfono'} ({lang.toUpperCase()})</label>
+                  <input
+                    type="text"
+                    value={translations[lang]?.phone || ''}
+                    onChange={(e) => handleTranslationChange(lang, 'phone', e.target.value)}
+                    placeholder={t('admin.optional')}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>{language === 'en' ? 'Technique' : language === 'it' ? 'Tecnica' : 'Técnica'} ({lang.toUpperCase()})</label>
+                  <input
+                    type="text"
+                    value={translations[lang]?.technique || ''}
+                    onChange={(e) => handleTranslationChange(lang, 'technique', e.target.value)}
+                    placeholder={t('admin.optional')}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>{language === 'en' ? 'Location' : language === 'it' ? 'Posizione' : 'Ubicación'} ({lang.toUpperCase()})</label>
+                  <input
+                    type="text"
+                    value={translations[lang]?.location || ''}
+                    onChange={(e) => handleTranslationChange(lang, 'location', e.target.value)}
+                    placeholder={t('admin.optional')}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>{language === 'en' ? 'Bio' : language === 'it' ? 'Biografia' : 'Biografía'} ({lang.toUpperCase()})</label>
+                <textarea
+                  value={translations[lang]?.bio || ''}
+                  onChange={(e) => handleTranslationChange(lang, 'bio', e.target.value)}
+                  rows="6"
+                  placeholder={t('admin.optional')}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+          <div className="form-actions">
+            <button type="submit" className="save-btn" disabled={saving}>
+              {saving 
+                ? (language === 'en' ? 'Saving...' : language === 'it' ? 'Salvataggio...' : 'Guardando...')
+                : (language === 'en' ? 'Save Profile' : language === 'it' ? 'Salva Profilo' : 'Guardar Perfil')
+              }
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   )
 }

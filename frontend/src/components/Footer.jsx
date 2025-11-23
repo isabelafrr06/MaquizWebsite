@@ -96,7 +96,7 @@ function Footer() {
         </div>
         
         <div className="footer-bottom">
-          <p className="footer-copyright">{t('footer.copyright')}</p>
+          <p className="footer-copyright">{t('home.footer')}</p>
           <Link to="/admin/login" className="admin-link">
             <svg className="admin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>

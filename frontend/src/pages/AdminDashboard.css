@@ -167,6 +167,23 @@
   box-shadow: 0 4px 15px rgba(64, 224, 208, 0.4);
 }
 
+.admin-edit-btn {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--turquoise) 0%, var(--blue) 50%, var(--violet) 100%);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.admin-edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(64, 224, 208, 0.4);
+}
+
 .artworks-grid-admin,
 .events-grid-admin {
   display: grid;
@@ -219,7 +236,8 @@
 }
 
 .edit-btn,
-.delete-btn {
+.delete-btn,
+.hide-btn {
   flex: 1;
   padding: 10px;
   border: none;
@@ -236,6 +254,23 @@
 
 .edit-btn:hover {
   background: var(--blue-dark);
+}
+
+.hide-btn {
+  background: #ff9800;
+  color: var(--white);
+}
+
+.hide-btn:hover {
+  background: #f57c00;
+}
+
+.hide-btn.show-on-site {
+  background: #4CAF50;
+}
+
+.hide-btn.show-on-site:hover {
+  background: #45a049;
 }
 
 .delete-btn {
@@ -1258,5 +1293,63 @@
   background: #c82333;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+/* Profile View Mode */
+.profile-view {
+  background: var(--white);
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--gray-light);
+}
+
+.profile-header h2 {
+  margin: 0;
+  color: var(--black);
+  font-size: 1.8rem;
+}
+
+.profile-info-view {
+  padding: 20px 0;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--gray-light);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.info-label {
+  font-weight: 600;
+  color: var(--gray-dark);
+  min-width: 150px;
+  margin-right: 20px;
+}
+
+.info-value {
+  color: var(--black);
+  flex: 1;
+  word-wrap: break-word;
+}
+
+.bio-value {
+  white-space: pre-wrap;
+  line-height: 1.6;
 }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
-import { getTranslation } from '../utils/translations'
+import { getTranslation, onCacheUpdate } from '../utils/translations'
 import ImageCarousel from '../components/ImageCarousel'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
@@ -8,10 +8,19 @@ import './Home.css'
 import axios from 'axios'
 
 function Home() {
-  const { language } = useLanguage()
+  const { language, textsLoaded } = useLanguage()
   const t = (key) => getTranslation(language, key)
   const [artworks, setArtworks] = useState([])
   const [loading, setLoading] = useState(true)
+  const [, forceUpdate] = useState(0)
+  
+  // Re-render when database texts are loaded
+  useEffect(() => {
+    const unsubscribe = onCacheUpdate(() => {
+      forceUpdate(prev => prev + 1)
+    })
+    return unsubscribe
+  }, [])
 
   useEffect(() => {
     const fetchArtworks = async () => {

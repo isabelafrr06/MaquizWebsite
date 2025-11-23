@@ -62,29 +62,18 @@ module Api
           end
         end
 
-        def destroy
-          # Handle key with dots - Rails will decode it automatically
-          key = params[:key] || params[:id]
-          @text = SiteText.find_by(key: key)
-          if @text
-            key = @text.key
-            @text.destroy
-            log_audit('delete', resource: @text, description: "Deleted text: #{key}")
-            head :no_content
-          else
-            render json: { error: 'Text not found' }, status: :not_found
-          end
-        end
+        # Removed destroy action - texts can only be hidden, not deleted
 
         private
 
         def text_params
-          params.permit(:key, :description, :translations)
+          params.permit(:key, :description, :translations, :hidden)
         end
         
         def text_json(text)
           text.as_json.merge(
-            translations: text.translations || {}
+            translations: text.translations || {},
+            hidden: text.respond_to?(:hidden) ? (text.hidden == true) : false
           )
         end
       end

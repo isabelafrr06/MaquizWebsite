@@ -13,18 +13,18 @@ export const useLanguage = () => {
 
 export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState(() => {
-    // Get language from localStorage or default to English
+    // Get language from localStorage or default to Spanish
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('language') || 'en'
+      return localStorage.getItem('language') || 'es'
     }
-    return 'en'
+    return 'es'
   })
   const [textsLoaded, setTextsLoaded] = useState(false)
 
   // Initial fetch of texts on mount - this is critical for database texts to work
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const initialLanguage = localStorage.getItem('language') || 'en'
+      const initialLanguage = localStorage.getItem('language') || 'es'
       // Fetch texts for the initial language immediately
       refreshTextsCache(initialLanguage)
         .then((data) => {

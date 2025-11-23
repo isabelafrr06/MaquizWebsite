@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getTranslation, refreshTextsCache } from '../utils/translations'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import axios from 'axios'
 import './AdminDashboard.css'
 
@@ -497,6 +498,7 @@ function AdminDashboard() {
       <div className="admin-header" ref={headerRef}>
         <h1 className="admin-dashboard-title">{t('admin.dashboard')}</h1>
         <div className="admin-header-actions">
+          <LanguageSwitcher />
           <button 
             onClick={() => navigate('/')} 
             className="admin-home-btn"

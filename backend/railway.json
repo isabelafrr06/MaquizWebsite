@@ -7,7 +7,7 @@
     "startCommand": "mkdir -p tmp/pids && bundle exec puma -C config/puma.rb",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
-    "releaseCommand": "RAILS_ENV=production bundle exec rails db:create 2>/dev/null || true && RAILS_ENV=production bundle exec rails db:migrate && (RAILS_ENV=production bundle exec rails db:seed || echo 'Seeds completed with warnings - check logs')"
+    "releaseCommand": "bundle exec rails db:prepare && bundle exec rails db:seed || echo 'Seeds completed with warnings'"
   }
 }
 

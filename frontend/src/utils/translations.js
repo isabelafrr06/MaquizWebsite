@@ -48,7 +48,6 @@ const fetchDbTexts = async (locale = 'es') => {
     const response = await fetch(`/api/v1/texts?locale=${locale}`)
     if (response.ok) {
       const responseData = await response.json()
-      console.log('Fetched database texts for locale:', locale, 'Response:', responseData)
       
       // Handle new format with _meta, or old format for backward compatibility
       let data, allKeys
@@ -68,14 +67,10 @@ const fetchDbTexts = async (locale = 'es') => {
         dbTextsCacheTime = now
         notifyCacheUpdate() // Notify listeners that cache was updated
         return data
-      } else {
-        console.warn('Database texts response is empty or invalid:', responseData)
       }
-    } else {
-      console.error('Failed to fetch texts from database. Status:', response.status)
     }
   } catch (error) {
-    console.error('Error fetching texts from database:', error)
+    // Silently handle errors
   }
   
   return null
@@ -156,7 +151,7 @@ export const getTranslation = (language, key) => {
           return ''
         }
       } catch (error) {
-        console.error('Error accessing database cache for key:', key, error)
+        // Silently handle errors
       }
     }
   } else if (keyExistsInDatabase) {
@@ -181,7 +176,6 @@ export const getTranslation = (language, key) => {
       
       return value || key
     } catch (error) {
-      console.error('Error getting translation:', error)
       return key
     }
   }
@@ -197,7 +191,6 @@ export const refreshTextsCache = async (locale = 'es') => {
   dbAllKeysCache = null
   const data = await fetchDbTexts(locale)
   if (data) {
-    console.log('Database texts cache refreshed for locale:', locale, 'Keys found:', Object.keys(data).length)
     notifyCacheUpdate() // Notify listeners that cache was updated
   }
   return data

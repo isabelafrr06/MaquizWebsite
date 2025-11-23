@@ -131,7 +131,6 @@ function AdminDashboard() {
         // Expected for non-admin users, silently ignore
         return
       }
-      console.error('Error fetching texts:', error)
     }
   }
 
@@ -346,7 +345,6 @@ function AdminDashboard() {
       await refreshTextsCache()
       fetchTexts()
     } catch (error) {
-      console.error('Error toggling text visibility:', error)
       alert(language === 'en' ? 'Error updating text visibility' : language === 'it' ? 'Errore nell\'aggiornare la visibilità del testo' : 'Error al actualizar la visibilidad del texto')
     }
   }
@@ -1729,7 +1727,6 @@ function TextForm({ text, onClose, onSave }) {
       onSave()
       onClose()
     } catch (error) {
-      console.error('Error saving text:', error)
       alert(language === 'en' ? 'Error saving text' : language === 'it' ? 'Errore nel salvare il testo' : 'Error al guardar el texto')
     } finally {
       setSaving(false)

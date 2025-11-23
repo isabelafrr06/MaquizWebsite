@@ -1,4 +1,7 @@
 Rails.application.routes.draw do
+  # Root route - API info
+  root to: proc { |env| [200, { 'Content-Type' => 'application/json' }, [{ message: 'Maquiz API', version: 'v1', endpoints: '/api/v1' }.to_json]] }
+  
   namespace :api do
     namespace :v1 do
       resources :artworks, only: [:index, :show]

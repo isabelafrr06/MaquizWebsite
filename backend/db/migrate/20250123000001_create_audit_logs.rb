@@ -6,7 +6,7 @@ class CreateAuditLogs < ActiveRecord::Migration[7.1]
         t.string :action, null: false
         t.string :resource_type
         t.integer :resource_id
-        t.jsonb :changes, default: {}
+        t.jsonb :changes_data, default: {}
         t.string :ip_address
         t.text :description
 

@@ -26,6 +26,7 @@ module Api
           end
           
           if @event.save
+            log_audit('create', resource: @event, description: "Created event: #{@event.translated_title('en')}")
             render json: event_json(@event), status: :created
           else
             render json: { errors: @event.errors.full_messages }, status: :unprocessable_entity
@@ -41,7 +42,9 @@ module Api
             @event.translations = params[:translations] if params[:translations].is_a?(Hash)
           end
           
+          changes = @event.changes
           if @event.update(event_params.except(:translations))
+            log_audit('update', resource: @event, description: "Updated event: #{@event.translated_title('en')}", changes: changes)
             render json: event_json(@event)
           else
             render json: { errors: @event.errors.full_messages }, status: :unprocessable_entity
@@ -50,7 +53,9 @@ module Api
 
         def destroy
           @event = PortfolioEvent.find(params[:id])
+          title = @event.translated_title('en')
           @event.destroy
+          log_audit('delete', resource: @event, description: "Deleted event: #{title}")
           head :no_content
         end
 

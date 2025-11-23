@@ -28,7 +28,7 @@ class AuditLog < ApplicationRecord
       action: action,
       resource_type: resource&.class&.name,
       resource_id: resource&.id,
-      changes: changes,
+      changes_data: changes,
       ip_address: ip_address,
       description: description
     )

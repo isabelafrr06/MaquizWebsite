@@ -13,24 +13,19 @@ module Api
         
         token = generate_token(admin.id)
         
-        # Log the login (async to avoid blocking)
+        # Log the login
         begin
           if defined?(::AuditLog) && ::AuditLog.table_exists?
-            Thread.new do
-              begin
-                ::AuditLog.log(
-                  'login',
-                  admin: admin,
-                  ip_address: request.remote_ip,
-                  description: "Admin logged in: #{admin.email}"
-                )
-              rescue => e
-                Rails.logger.warn("Could not create audit log: #{e.message}")
-              end
-            end
+            ::AuditLog.log(
+              'login',
+              admin: admin,
+              ip_address: request.remote_ip,
+              description: "Admin logged in: #{admin.email}"
+            )
           end
         rescue => e
-          Rails.logger.warn("Could not create audit log: #{e.message}")
+          Rails.logger.error("Could not create audit log for login: #{e.class.name} - #{e.message}")
+          Rails.logger.error(e.backtrace.first(5).join("\n"))
         end
         
         render json: { 
@@ -42,6 +37,27 @@ module Api
             role: admin.role || 'admin'
           }
         }
+      end
+
+      def logout
+        return unless authenticate_admin_for_current_user
+        
+        # Log the logout
+        begin
+          if defined?(::AuditLog) && ::AuditLog.table_exists?
+            ::AuditLog.log(
+              'logout',
+              admin: @current_admin,
+              ip_address: request.remote_ip,
+              description: "Admin logged out: #{@current_admin.email}"
+            )
+          end
+        rescue => e
+          Rails.logger.error("Could not create audit log for logout: #{e.class.name} - #{e.message}")
+          Rails.logger.error(e.backtrace.first(5).join("\n"))
+        end
+        
+        head :no_content
       end
 
       def show_current_user

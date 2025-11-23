@@ -25,6 +25,7 @@ module Api
           end
 
           if @category.save
+            log_audit('create', resource: @category, description: "Created category: #{@category.translated_name('en')}")
             render json: category_json(@category), status: :created
           else
             render json: { errors: @category.errors.full_messages }, status: :unprocessable_entity
@@ -37,7 +38,9 @@ module Api
             @category.translations = params[:translations] if params[:translations].is_a?(Hash)
           end
 
+          changes = @category.changes
           if @category.update(category_params.except(:translations))
+            log_audit('update', resource: @category, description: "Updated category: #{@category.translated_name('en')}", changes: changes)
             render json: category_json(@category)
           else
             render json: { errors: @category.errors.full_messages }, status: :unprocessable_entity
@@ -45,7 +48,9 @@ module Api
         end
 
         def destroy
+          name = @category.translated_name('en')
           @category.destroy
+          log_audit('delete', resource: @category, description: "Deleted category: #{name}")
           head :no_content
         end
 

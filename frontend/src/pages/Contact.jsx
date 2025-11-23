@@ -27,7 +27,6 @@ function Contact() {
   const handleSubmit = (e) => {
     e.preventDefault()
     // In a real application, you would send this to a backend API
-    console.log('Form submitted:', formData)
     setSubmitted(true)
     setTimeout(() => {
       setSubmitted(false)

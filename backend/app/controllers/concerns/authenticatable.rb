@@ -36,5 +36,30 @@ module Authenticatable
       render json: { error: 'Access denied' }, status: :forbidden
     end
   end
+
+  def log_audit(action, resource: nil, description: nil, changes: {})
+    return unless @current_admin # Don't log if no admin is set
+    
+    begin
+      if defined?(::AuditLog) && ::AuditLog.table_exists?
+        ::AuditLog.log(
+          action,
+          admin: @current_admin,
+          resource: resource,
+          changes: changes,
+          ip_address: request.remote_ip,
+          description: description
+        )
+      else
+        Rails.logger.warn("AuditLog not available: defined=#{defined?(::AuditLog)}, table_exists=#{defined?(::AuditLog) && ::AuditLog.table_exists?}")
+      end
+    rescue NameError, ActiveRecord::StatementInvalid => e
+      Rails.logger.error("Could not create audit log: #{e.class.name} - #{e.message}")
+      Rails.logger.error(e.backtrace.first(10).join("\n"))
+    rescue => e
+      Rails.logger.error("Could not create audit log: #{e.class.name} - #{e.message}")
+      Rails.logger.error(e.backtrace.first(10).join("\n"))
+    end
+  end
 end
 

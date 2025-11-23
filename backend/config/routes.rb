@@ -9,6 +9,7 @@ Rails.application.routes.draw do
       
       # Admin routes
       post 'admin/login', to: 'admin#login'
+      delete 'admin/logout', to: 'admin#logout'
       get 'admin/current_user', to: 'admin#show_current_user'
       
       namespace :admin do

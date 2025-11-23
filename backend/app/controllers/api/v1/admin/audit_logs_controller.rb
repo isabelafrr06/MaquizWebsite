@@ -7,14 +7,16 @@ module Api
         before_action :require_admin_role
 
         def index
-          unless defined?(AuditLog) && AuditLog.table_exists?
+          unless defined?(::AuditLog) && ::AuditLog.table_exists?
+            Rails.logger.warn("AuditLog not available in index: defined=#{defined?(::AuditLog)}, table_exists=#{defined?(::AuditLog) && ::AuditLog.table_exists?}")
             render json: []
             return
           end
           
-          logs = AuditLog.recent
+          logs = ::AuditLog.recent
           logs = logs.by_admin(params[:admin_id]) if params[:admin_id].present?
-          logs = logs.by_action(params[:action]) if params[:action].present?
+          # Use :log_action instead of :action to avoid conflict with Rails controller action
+          logs = logs.by_action(params[:log_action]) if params[:log_action].present?
           logs = logs.by_resource(params[:resource_type], params[:resource_id]) if params[:resource_type].present?
           logs = logs.limit(1000) # Limit to prevent huge responses
 
@@ -22,12 +24,12 @@ module Api
         end
 
         def show
-          unless defined?(AuditLog) && AuditLog.table_exists?
+          unless defined?(::AuditLog) && ::AuditLog.table_exists?
             render json: { error: 'Audit logs not available' }, status: :not_found
             return
           end
           
-          log = AuditLog.find(params[:id])
+          log = ::AuditLog.find(params[:id])
           render json: log_json(log)
         end
 
@@ -39,7 +41,7 @@ module Api
             action: log.action,
             resource_type: log.resource_type,
             resource_id: log.resource_id,
-            changes: log.changes,
+            changes: log.changes_data,
             ip_address: log.ip_address,
             description: log.description,
             admin_email: log.admin&.email,

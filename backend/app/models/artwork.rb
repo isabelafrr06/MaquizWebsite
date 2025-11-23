@@ -2,7 +2,7 @@ class Artwork < ApplicationRecord
   has_one_attached :image
   
   # Store translations as JSON: { "es": { "title": "...", "description": "...", "category": "..." }, "en": { ... } }
-  validates :title, presence: true
+  validates :title, presence: { message: "Title is required" }
   validate :image_or_url_present
   
   # Get translated field, fallback to default language or original field
@@ -41,7 +41,7 @@ class Artwork < ApplicationRecord
   
   def image_or_url_present
     unless image.attached? || image_url.present?
-      errors.add(:base, "Either an image file or image URL must be provided")
+      errors.add(:base, "Either an image file or image URL must be provided. Please upload an image file or provide an image URL.")
     end
   end
 end

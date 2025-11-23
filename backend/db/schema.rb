@@ -78,7 +78,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_22_173200) do
     t.string "action", null: false
     t.string "resource_type"
     t.integer "resource_id"
-    t.jsonb "changes", default: {}
+    t.jsonb "changes_data", default: {}
     t.string "ip_address"
     t.text "description"
     t.datetime "created_at", null: false

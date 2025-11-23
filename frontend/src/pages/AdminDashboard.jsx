@@ -191,7 +191,7 @@ function AdminDashboard() {
       const response = await axios.get('/api/v1/admin/audit_logs', {
         headers: { Authorization: `Bearer ${token}` }
       })
-      setLogs(response.data)
+      setLogs(response.data || [])
     } catch (error) {
       if (error.response?.status === 401) {
         localStorage.removeItem('adminToken')
@@ -201,6 +201,7 @@ function AdminDashboard() {
         return
       }
       console.error('Error fetching logs:', error)
+      console.error('Error response:', error.response?.data)
     }
   }
 
@@ -284,6 +285,14 @@ function AdminDashboard() {
     loadAdminData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser])
+
+  // Fetch logs when logs tab becomes active
+  useEffect(() => {
+    if (activeTab === 'logs' && currentUser && currentUser.role === 'admin') {
+      fetchLogs()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, currentUser])
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken')
@@ -553,10 +562,11 @@ function AdminDashboard() {
               className={`admin-tab ${activeTab === tab.id ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}
               onClick={() => {
                 if (!isDisabled) {
-                  if (tab.id === 'logs') {
-                    fetchLogs() // Refresh logs when switching to logs tab
-                  }
                   handleTabChange(tab.id)
+                  if (tab.id === 'logs') {
+                    // Fetch logs after tab change
+                    setTimeout(() => fetchLogs(), 100)
+                  }
                 }
               }}
               disabled={isDisabled}
@@ -1251,7 +1261,30 @@ function ArtworkForm({ artwork, onClose, onSave }) {
       onClose()
     } catch (error) {
       console.error('Error saving artwork:', error)
-      alert(language === 'en' ? 'Error saving artwork' : 'Error al guardar la obra')
+      let errorMessage = language === 'en' ? 'Error saving artwork' : 'Error al guardar la obra'
+      
+      if (error.response?.data?.errors) {
+        const errors = error.response.data.errors
+        if (Array.isArray(errors)) {
+          errorMessage = errors.join('\n')
+        } else if (typeof errors === 'object') {
+          errorMessage = Object.entries(errors)
+            .map(([field, messages]) => {
+              const fieldName = field === 'base' 
+                ? (language === 'en' ? 'General' : 'General')
+                : field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+              const messagesText = Array.isArray(messages) ? messages.join(', ') : messages
+              return `${fieldName}: ${messagesText}`
+            })
+            .join('\n')
+        } else {
+          errorMessage = String(errors)
+        }
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      }
+      
+      alert(errorMessage)
     } finally {
       setSaving(false)
     }

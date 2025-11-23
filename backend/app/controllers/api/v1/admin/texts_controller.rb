@@ -31,6 +31,7 @@ module Api
           end
           
           if @text.save
+            log_audit('create', resource: @text, description: "Created text: #{@text.key}")
             render json: text_json(@text), status: :created
           else
             render json: { errors: @text.errors.full_messages }, status: :unprocessable_entity
@@ -52,7 +53,9 @@ module Api
             @text.translations = params[:translations] if params[:translations].is_a?(Hash)
           end
           
+          changes = @text.changes
           if @text.update(text_params.except(:translations))
+            log_audit('update', resource: @text, description: "Updated text: #{@text.key}", changes: changes)
             render json: text_json(@text)
           else
             render json: { errors: @text.errors.full_messages }, status: :unprocessable_entity
@@ -64,7 +67,9 @@ module Api
           key = params[:key] || params[:id]
           @text = SiteText.find_by(key: key)
           if @text
+            key = @text.key
             @text.destroy
+            log_audit('delete', resource: @text, description: "Deleted text: #{key}")
             head :no_content
           else
             render json: { error: 'Text not found' }, status: :not_found

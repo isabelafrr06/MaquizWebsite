@@ -19,7 +19,7 @@ module Api
         def create
           user = ::Admin.new(user_params)
           if user.save
-            log_audit('create', user, "Created admin user: #{user.email}")
+            log_audit('create', resource: user, description: "Created admin user: #{user.email}")
             render json: user_json(user), status: :created
           else
             render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
@@ -36,7 +36,7 @@ module Api
           changes = user.changes
 
           if user.update(user_params)
-            log_audit('update', user, "Updated admin user: #{old_email}", changes)
+            log_audit('update', resource: user, description: "Updated admin user: #{old_email}", changes: changes)
             render json: user_json(user)
           else
             render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
@@ -52,7 +52,7 @@ module Api
           email = user.email
           
           if user.destroy
-            log_audit('delete', user, "Deleted admin user: #{email}")
+            log_audit('delete', resource: user, description: "Deleted admin user: #{email}")
             head :no_content
           else
             render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
@@ -84,26 +84,6 @@ module Api
           permitted
         end
 
-        def log_audit(action, resource, description, changes = {})
-          begin
-            # Check if AuditLog class exists and table exists
-            if defined?(::AuditLog) && ::AuditLog.table_exists?
-              ::AuditLog.log(
-                action,
-                admin: @current_admin,
-                resource: resource,
-                changes: changes,
-                description: description
-              )
-            end
-          rescue NameError, ActiveRecord::StatementInvalid => e
-            # Log table might not exist yet, continue anyway
-            Rails.logger.warn("Could not create audit log: #{e.message}")
-          rescue => e
-            # Any other error, log but don't fail
-            Rails.logger.warn("Could not create audit log: #{e.message}")
-          end
-        end
 
         def user_json(user)
           {

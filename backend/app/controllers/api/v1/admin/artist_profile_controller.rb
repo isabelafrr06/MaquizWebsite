@@ -25,6 +25,14 @@ module Api
           end
 
           if profile.save
+            action_desc = if params[:remove_photo].present? && (params[:remove_photo] == 'true' || params[:remove_photo] == true)
+              "Removed artist photo"
+            elsif params[:photo].present?
+              "Updated artist photo"
+            else
+              "Updated artist profile"
+            end
+            log_audit('update', resource: profile, description: action_desc)
             render json: {
               id: profile.id,
               photo_url: profile.photo.attached? ? url_for(profile.photo) : nil,

@@ -25,14 +25,33 @@ module Api
             @artwork.translations = params[:translations] if params[:translations].is_a?(Hash)
           end
           
+          # Set title from translations if title param is not provided
+          if @artwork.title.blank? && @artwork.translations.present?
+            @artwork.title = @artwork.translations.dig('es', 'title') || 
+                            @artwork.translations.dig('en', 'title') || 
+                            @artwork.translations.dig('it', 'title') || 
+                            ''
+          end
+          
           if params[:image].present?
             @artwork.image.attach(params[:image])
           end
           
           if @artwork.save
+            begin
+              log_audit('create', resource: @artwork, description: "Created artwork: #{@artwork.translated_title('en')}")
+            rescue => e
+              Rails.logger.error("Failed to log artwork creation: #{e.message}")
+              Rails.logger.error(e.backtrace.first(10).join("\n"))
+            end
             render json: artwork_json(@artwork), status: :created
           else
-            render json: { errors: @artwork.errors.full_messages }, status: :unprocessable_entity
+            # Return detailed error messages
+            error_messages = @artwork.errors.full_messages
+            render json: { 
+              errors: error_messages,
+              error_details: @artwork.errors.messages
+            }, status: :unprocessable_entity
           end
         end
 
@@ -49,16 +68,37 @@ module Api
             @artwork.image.attach(params[:image])
           end
           
+          changes = @artwork.changes
           if @artwork.update(artwork_params.except(:image, :translations))
+            begin
+              log_audit('update', resource: @artwork, description: "Updated artwork: #{@artwork.translated_title('en')}", changes: changes)
+            rescue => e
+              Rails.logger.error("Failed to log artwork update: #{e.message}")
+              Rails.logger.error(e.backtrace.first(10).join("\n"))
+            end
             render json: artwork_json(@artwork)
           else
-            render json: { errors: @artwork.errors.full_messages }, status: :unprocessable_entity
+            # Return detailed error messages
+            error_messages = @artwork.errors.full_messages
+            render json: { 
+              errors: error_messages,
+              error_details: @artwork.errors.messages
+            }, status: :unprocessable_entity
           end
         end
 
         def destroy
           @artwork = Artwork.find(params[:id])
+          title = @artwork.translated_title('en')
+          artwork_id = @artwork.id
           @artwork.destroy
+          begin
+            # Create a temporary object for logging since the artwork is destroyed
+            temp_artwork = OpenStruct.new(class: Artwork, id: artwork_id)
+            log_audit('delete', resource: temp_artwork, description: "Deleted artwork: #{title}")
+          rescue => e
+            Rails.logger.error("Failed to log artwork deletion: #{e.message}")
+          end
           head :no_content
         end
 

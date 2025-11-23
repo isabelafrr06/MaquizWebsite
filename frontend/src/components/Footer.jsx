@@ -32,7 +32,7 @@ function Footer() {
               <h3 className="footer-links-title">{t('footer.followUs')}</h3>
               <div className="social-links">
                 <a 
-                  href="https://www.facebook.com" 
+                  href="https://www.facebook.com/magaly.quiros.cruz" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="social-link social-link-facebook"
@@ -44,7 +44,7 @@ function Footer() {
                   <span>Facebook</span>
                 </a>
                 <a 
-                  href="https://www.instagram.com" 
+                  href="https://www.instagram.com/maquizcr/" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="social-link social-link-instagram"

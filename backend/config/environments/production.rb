@@ -4,7 +4,11 @@ Rails.application.configure do
   config.cache_classes = true
   config.eager_load = true
   config.consider_all_requests_local = false
-  config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present?
+  # Enable serving static files for Active Storage (images, uploads)
+  config.public_file_server.enabled = true
+  config.public_file_server.headers = {
+    'Cache-Control' => "public, max-age=#{1.year.to_i}"
+  }
   config.force_ssl = true
   config.log_level = :info
   config.log_tags = [ :request_id ]

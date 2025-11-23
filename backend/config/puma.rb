@@ -5,7 +5,15 @@ threads min_threads_count, max_threads_count
 port ENV.fetch("PORT") { 3000 }
 environment ENV.fetch("RAILS_ENV") { "development" }
 
-pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }
+# Only use pidfile in development, Railway manages processes in production
+if ENV["RAILS_ENV"] == "production"
+  # Create tmp directories if they don't exist
+  require "fileutils"
+  FileUtils.mkdir_p("tmp/pids") unless File.directory?("tmp/pids")
+  pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }
+else
+  pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }
+end
 
 workers ENV.fetch("WEB_CONCURRENCY") { 2 }
 

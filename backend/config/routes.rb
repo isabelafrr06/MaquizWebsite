@@ -9,12 +9,15 @@ Rails.application.routes.draw do
       
       # Admin routes
       post 'admin/login', to: 'admin#login'
+      get 'admin/current_user', to: 'admin#show_current_user'
       
       namespace :admin do
         resources :artworks
         resources :events
         resources :texts, param: :key, constraints: { key: /[^\/]+/ }
         resources :categories
+        resources :users
+        resources :audit_logs, only: [:index, :show]
         get 'carousel', to: 'carousel#index'
         put 'carousel/:id', to: 'carousel#update'
         patch 'carousel/:id', to: 'carousel#update'

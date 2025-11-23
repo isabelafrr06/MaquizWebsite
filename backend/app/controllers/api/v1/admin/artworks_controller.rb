@@ -4,6 +4,7 @@ module Api
       class ArtworksController < ApplicationController
         include Authenticatable
         before_action :authenticate_admin
+        before_action :require_artwork_access, except: [:index, :show]
 
         def index
           @artworks = Artwork.all.order(created_at: :desc)

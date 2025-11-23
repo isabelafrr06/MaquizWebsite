@@ -4,6 +4,7 @@ module Api
       class CategoriesController < ApplicationController
         include Authenticatable
         before_action :authenticate_admin
+        before_action :require_admin_role
         before_action :set_category, only: [:show, :update, :destroy]
 
         def index

@@ -24,5 +24,17 @@ module Authenticatable
     payload = { admin_id: admin_id, exp: 24.hours.from_now.to_i }
     JWT.encode(payload, Rails.application.secret_key_base, 'HS256')
   end
+
+  def require_admin_role
+    unless @current_admin&.admin?
+      render json: { error: 'Admin access required' }, status: :forbidden
+    end
+  end
+
+  def require_artwork_access
+    unless @current_admin&.can_manage_artworks?
+      render json: { error: 'Access denied' }, status: :forbidden
+    end
+  end
 end
 

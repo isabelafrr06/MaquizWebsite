@@ -4,6 +4,7 @@ module Api
       class TextsController < ApplicationController
         include Authenticatable
         before_action :authenticate_admin
+        before_action :require_admin_role
 
         def index
           @texts = SiteText.all.order(:key)

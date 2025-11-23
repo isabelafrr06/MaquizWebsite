@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getTranslation, refreshTextsCache } from '../utils/translations'
@@ -13,21 +13,27 @@ function AdminDashboard() {
   const [events, setEvents] = useState([])
   const [texts, setTexts] = useState([])
   const [categories, setCategories] = useState([])
+  const [users, setUsers] = useState([])
+  const [logs, setLogs] = useState([])
+  const [currentUser, setCurrentUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('artworks')
   const [editingArtwork, setEditingArtwork] = useState(null)
   const [editingEvent, setEditingEvent] = useState(null)
   const [editingText, setEditingText] = useState(null)
   const [editingCategory, setEditingCategory] = useState(null)
+  const [editingUser, setEditingUser] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [showEventForm, setShowEventForm] = useState(false)
   const [showTextForm, setShowTextForm] = useState(false)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
+  const [showUserForm, setShowUserForm] = useState(false)
   const [showBreadcrumb, setShowBreadcrumb] = useState(false)
   const [showBreadcrumbMenu, setShowBreadcrumbMenu] = useState(false)
   const headerRef = useRef(null)
   const tabsRef = useRef(null)
   const breadcrumbMenuRef = useRef(null)
+  const currentUserFetchedRef = useRef(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -80,12 +86,14 @@ function AdminDashboard() {
         navigate('/admin/login')
       }
       console.error('Error fetching artworks:', error)
-    } finally {
-      setLoading(false)
     }
   }
 
   const fetchEvents = async () => {
+    // Only fetch if user is admin
+    if (currentUser && currentUser.role !== 'admin') {
+      return
+    }
     try {
       const token = localStorage.getItem('adminToken')
       const response = await axios.get('/api/v1/admin/events', {
@@ -96,12 +104,19 @@ function AdminDashboard() {
       if (error.response?.status === 401) {
         localStorage.removeItem('adminToken')
         navigate('/admin/login')
+      } else if (error.response?.status === 403) {
+        // Expected for non-admin users, silently ignore
+        return
       }
       console.error('Error fetching events:', error)
     }
   }
 
   const fetchTexts = async () => {
+    // Only fetch if user is admin
+    if (currentUser && currentUser.role !== 'admin') {
+      return
+    }
     try {
       const token = localStorage.getItem('adminToken')
       const response = await axios.get('/api/v1/admin/texts', {
@@ -112,12 +127,19 @@ function AdminDashboard() {
       if (error.response?.status === 401) {
         localStorage.removeItem('adminToken')
         navigate('/admin/login')
+      } else if (error.response?.status === 403) {
+        // Expected for non-admin users, silently ignore
+        return
       }
       console.error('Error fetching texts:', error)
     }
   }
 
   const fetchCategories = async () => {
+    // Only fetch if user is admin
+    if (currentUser && currentUser.role !== 'admin') {
+      return
+    }
     try {
       const token = localStorage.getItem('adminToken')
       const response = await axios.get('/api/v1/admin/categories', {
@@ -128,8 +150,92 @@ function AdminDashboard() {
       if (error.response?.status === 401) {
         localStorage.removeItem('adminToken')
         navigate('/admin/login')
+      } else if (error.response?.status === 403) {
+        // Expected for non-admin users, silently ignore
+        return
       }
       console.error('Error fetching categories:', error)
+    }
+  }
+
+  const fetchUsers = async () => {
+    // Only fetch if user is admin
+    if (currentUser && currentUser.role !== 'admin') {
+      return
+    }
+    try {
+      const token = localStorage.getItem('adminToken')
+      const response = await axios.get('/api/v1/admin/users', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setUsers(response.data)
+    } catch (error) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem('adminToken')
+        navigate('/admin/login')
+      } else if (error.response?.status === 403) {
+        // Expected for non-admin users, silently ignore
+        return
+      }
+      console.error('Error fetching users:', error)
+    }
+  }
+
+  const fetchLogs = async () => {
+    // Only fetch if user is admin
+    if (currentUser && currentUser.role !== 'admin') {
+      return
+    }
+    try {
+      const token = localStorage.getItem('adminToken')
+      const response = await axios.get('/api/v1/admin/audit_logs', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setLogs(response.data)
+    } catch (error) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem('adminToken')
+        navigate('/admin/login')
+      } else if (error.response?.status === 403) {
+        // Expected for non-admin users, silently ignore
+        return
+      }
+      console.error('Error fetching logs:', error)
+    }
+  }
+
+  const fetchCurrentUser = async () => {
+    // Prevent multiple simultaneous calls
+    if (currentUserFetchedRef.current) {
+      return Promise.resolve()
+    }
+    
+    // If we already have currentUser, don't fetch again
+    if (currentUser) {
+      return Promise.resolve()
+    }
+    
+    currentUserFetchedRef.current = true
+    
+    try {
+      const token = localStorage.getItem('adminToken')
+      if (!token) {
+        currentUserFetchedRef.current = false
+        return Promise.resolve()
+      }
+      const response = await axios.get('/api/v1/admin/current_user', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setCurrentUser(response.data)
+      return Promise.resolve()
+    } catch (error) {
+      currentUserFetchedRef.current = false // Reset on error so we can retry
+      if (error.response?.status === 401) {
+        localStorage.removeItem('adminToken')
+        navigate('/admin/login')
+      }
+      console.error('Error fetching current user:', error)
+      return Promise.resolve() // Don't block other fetches
     }
   }
 
@@ -139,11 +245,45 @@ function AdminDashboard() {
       navigate('/admin/login')
       return
     }
-    fetchArtworks()
-    fetchEvents()
-    fetchTexts()
-    fetchCategories()
+    
+    const loadData = async () => {
+      try {
+        // First fetch current user to know their role
+        await fetchCurrentUser()
+        
+        // Always fetch artworks (available to all users)
+        await fetchArtworks()
+      } catch (error) {
+        console.error('Error loading initial data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadData()
   }, [navigate])
+
+  // Fetch admin-only data after currentUser is set
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'admin') return
+    
+    const loadAdminData = async () => {
+      try {
+        await Promise.all([
+          fetchEvents(),
+          fetchTexts(),
+          fetchCategories(),
+          fetchUsers(),
+          fetchLogs()
+        ])
+      } catch (error) {
+        console.error('Error loading admin data:', error)
+      }
+    }
+    
+    loadAdminData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser])
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken')
@@ -220,6 +360,23 @@ function AdminDashboard() {
     }
   }
 
+  const handleDeleteUser = async (id) => {
+    if (!window.confirm(language === 'en' ? 'Are you sure you want to delete this user?' : language === 'it' ? 'Sei sicuro di voler eliminare questo utente?' : '¿Estás seguro de que quieres eliminar este usuario?')) {
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('adminToken')
+      await axios.delete(`/api/v1/admin/users/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      fetchUsers()
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      alert(language === 'en' ? 'Error deleting user' : language === 'it' ? 'Errore nell\'eliminare l\'utente' : 'Error al eliminar el usuario')
+    }
+  }
+
   const handleEdit = (artwork) => {
     setEditingArtwork(artwork)
     setShowForm(true)
@@ -228,16 +385,6 @@ function AdminDashboard() {
   const handleNew = () => {
     setEditingArtwork(null)
     setShowForm(true)
-  }
-
-  if (loading) {
-    return (
-      <div className="admin-dashboard">
-        <div className="admin-loading">
-          <p>{language === 'en' ? 'Loading...' : 'Cargando...'}</p>
-        </div>
-      </div>
-    )
   }
 
   const getActiveTabName = () => {
@@ -252,6 +399,10 @@ function AdminDashboard() {
         return language === 'en' ? 'Events' : language === 'it' ? 'Eventi' : 'Eventos'
       case 'categories':
         return language === 'en' ? 'Categories' : language === 'it' ? 'Categorie' : 'Categorías'
+      case 'users':
+        return language === 'en' ? 'Users' : language === 'it' ? 'Utenti' : 'Usuarios'
+      case 'logs':
+        return language === 'en' ? 'Logs' : language === 'it' ? 'Registri' : 'Registros'
       case 'artistProfile':
         return language === 'en' ? 'Artist Photo' : language === 'it' ? 'Foto Artista' : 'Foto del Artista'
       default:
@@ -259,41 +410,97 @@ function AdminDashboard() {
     }
   }
 
-  const tabs = [
-    { id: 'artworks', name: t('admin.artworks') },
-    { id: 'texts', name: t('admin.texts') },
-    { id: 'carousel', name: t('admin.carousel') },
-    { id: 'events', name: language === 'en' ? 'Events' : language === 'it' ? 'Eventi' : 'Eventos' },
-    { id: 'categories', name: language === 'en' ? 'Categories' : language === 'it' ? 'Categorie' : 'Categorías' },
-    { id: 'artistProfile', name: language === 'en' ? 'Artist Photo' : language === 'it' ? 'Foto Artista' : 'Foto del Artista' }
-  ]
+  const allTabs = useMemo(() => [
+    { id: 'artworks', name: getTranslation(language, 'admin.artworks'), requiresAdmin: false },
+    { id: 'texts', name: getTranslation(language, 'admin.texts'), requiresAdmin: true },
+    { id: 'carousel', name: getTranslation(language, 'admin.carousel'), requiresAdmin: true },
+    { id: 'events', name: language === 'en' ? 'Events' : language === 'it' ? 'Eventi' : 'Eventos', requiresAdmin: true },
+    { id: 'categories', name: language === 'en' ? 'Categories' : language === 'it' ? 'Categorie' : 'Categorías', requiresAdmin: true },
+    { id: 'users', name: language === 'en' ? 'Users' : language === 'it' ? 'Utenti' : 'Usuarios', requiresAdmin: true },
+    { id: 'logs', name: language === 'en' ? 'Logs' : language === 'it' ? 'Registri' : 'Registros', requiresAdmin: true },
+    { id: 'artistProfile', name: language === 'en' ? 'Artist Photo' : language === 'it' ? 'Foto Artista' : 'Foto del Artista', requiresAdmin: true }
+  ], [language])
+
+  const tabs = useMemo(() => {
+    // Show all tabs, but mark which ones are disabled for non-admin users
+    if (!currentUser) return allTabs.map(tab => ({ ...tab, disabled: false }))
+    if (currentUser.role === 'admin') return allTabs.map(tab => ({ ...tab, disabled: false }))
+    return allTabs.map(tab => ({ ...tab, disabled: tab.requiresAdmin }))
+  }, [allTabs, currentUser])
+
+  // If user tries to access a restricted tab, switch to artworks
+  useEffect(() => {
+    if (!currentUser) return
+    
+    const activeTabInfo = allTabs.find(tab => tab.id === activeTab)
+    if (currentUser.role !== 'admin' && activeTabInfo && activeTabInfo.requiresAdmin) {
+      setActiveTab('artworks')
+    }
+  }, [currentUser, activeTab, allTabs])
+
+  // Early return AFTER all hooks
+  if (loading) {
+    return (
+      <div className="admin-dashboard">
+        <div className="admin-loading">
+          <p>{language === 'en' ? 'Loading...' : 'Cargando...'}</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleTabChange = (tabId) => {
+    // Check if tab is disabled
+    const tab = allTabs.find(t => t.id === tabId)
+    if (tab && currentUser && currentUser.role !== 'admin' && tab.requiresAdmin) {
+      return // Don't allow switching to disabled tabs
+    }
     setActiveTab(tabId)
     setShowBreadcrumbMenu(false)
     // Scroll to top of content
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const requiresAdmin = (tabId) => {
+    const tab = allTabs.find(t => t.id === tabId)
+    return tab?.requiresAdmin && currentUser && currentUser.role !== 'admin'
+  }
+
+  const AccessDeniedMessage = () => (
+    <div className="admin-access-denied">
+      <p>{language === 'en' ? 'Admin access required' : language === 'it' ? 'Accesso amministratore richiesto' : 'Se requiere acceso de administrador'}</p>
+    </div>
+  )
+
   const navigateToPreviousTab = () => {
-    const currentIndex = tabs.findIndex(tab => tab.id === activeTab)
-    const previousIndex = currentIndex > 0 ? currentIndex - 1 : tabs.length - 1
-    handleTabChange(tabs[previousIndex].id)
+    const enabledTabs = allTabs.filter(tab => !tab.disabled || currentUser?.role === 'admin')
+    const currentIndex = enabledTabs.findIndex(tab => tab.id === activeTab)
+    const previousIndex = currentIndex > 0 ? currentIndex - 1 : enabledTabs.length - 1
+    handleTabChange(enabledTabs[previousIndex].id)
   }
 
   const navigateToNextTab = () => {
-    const currentIndex = tabs.findIndex(tab => tab.id === activeTab)
-    const nextIndex = currentIndex < tabs.length - 1 ? currentIndex + 1 : 0
-    handleTabChange(tabs[nextIndex].id)
+    const enabledTabs = allTabs.filter(tab => !tab.disabled || currentUser?.role === 'admin')
+    const currentIndex = enabledTabs.findIndex(tab => tab.id === activeTab)
+    const nextIndex = currentIndex < enabledTabs.length - 1 ? currentIndex + 1 : 0
+    handleTabChange(enabledTabs[nextIndex].id)
   }
 
   return (
     <div className="admin-dashboard">
       <div className="admin-header" ref={headerRef}>
         <h1 className="admin-dashboard-title">{t('admin.dashboard')}</h1>
-        <button onClick={handleLogout} className="admin-logout-btn">
-          {t('admin.logout')}
-        </button>
+        <div className="admin-header-actions">
+          <button 
+            onClick={() => navigate('/')} 
+            className="admin-home-btn"
+          >
+            {t('admin.backToSite')}
+          </button>
+          <button onClick={handleLogout} className="admin-logout-btn">
+            {t('admin.logout')}
+          </button>
+        </div>
       </div>
 
       <div className={`mobile-breadcrumb ${showBreadcrumb ? 'visible' : ''}`} ref={breadcrumbMenuRef}>
@@ -320,56 +527,45 @@ function AdminDashboard() {
         </button>
         {showBreadcrumbMenu && (
           <div className="breadcrumb-menu">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                className={`breadcrumb-menu-item ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => handleTabChange(tab.id)}
-              >
-                {tab.name}
-              </button>
-            ))}
+            {allTabs.map(tab => {
+              const isDisabled = currentUser && currentUser.role !== 'admin' && tab.requiresAdmin
+              return (
+                <button
+                  key={tab.id}
+                  className={`breadcrumb-menu-item ${activeTab === tab.id ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}
+                  onClick={() => !isDisabled && handleTabChange(tab.id)}
+                  disabled={isDisabled}
+                >
+                  {tab.name}
+                </button>
+              )
+            })}
           </div>
         )}
       </div>
 
       <div className="admin-tabs" ref={tabsRef}>
-        <button
-          className={`admin-tab ${activeTab === 'artworks' ? 'active' : ''}`}
-          onClick={() => handleTabChange('artworks')}
-        >
-          {t('admin.artworks')}
-        </button>
-        <button
-          className={`admin-tab ${activeTab === 'texts' ? 'active' : ''}`}
-          onClick={() => handleTabChange('texts')}
-        >
-          {t('admin.texts')}
-        </button>
-        <button
-          className={`admin-tab ${activeTab === 'carousel' ? 'active' : ''}`}
-          onClick={() => handleTabChange('carousel')}
-        >
-          {t('admin.carousel')}
-        </button>
-        <button
-          className={`admin-tab ${activeTab === 'events' ? 'active' : ''}`}
-          onClick={() => handleTabChange('events')}
-        >
-          {language === 'en' ? 'Events' : language === 'it' ? 'Eventi' : 'Eventos'}
-        </button>
-        <button
-          className={`admin-tab ${activeTab === 'categories' ? 'active' : ''}`}
-          onClick={() => handleTabChange('categories')}
-        >
-          {language === 'en' ? 'Categories' : language === 'it' ? 'Categorie' : 'Categorías'}
-        </button>
-        <button
-          className={`admin-tab ${activeTab === 'artistProfile' ? 'active' : ''}`}
-          onClick={() => handleTabChange('artistProfile')}
-        >
-          {language === 'en' ? 'Artist Photo' : language === 'it' ? 'Foto Artista' : 'Foto del Artista'}
-        </button>
+        {allTabs.map(tab => {
+          const isDisabled = currentUser && currentUser.role !== 'admin' && tab.requiresAdmin
+          return (
+            <button
+              key={tab.id}
+              className={`admin-tab ${activeTab === tab.id ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}
+              onClick={() => {
+                if (!isDisabled) {
+                  if (tab.id === 'logs') {
+                    fetchLogs() // Refresh logs when switching to logs tab
+                  }
+                  handleTabChange(tab.id)
+                }
+              }}
+              disabled={isDisabled}
+              title={isDisabled ? (language === 'en' ? 'Admin access required' : language === 'it' ? 'Accesso amministratore richiesto' : 'Se requiere acceso de administrador') : ''}
+            >
+              {tab.name}
+            </button>
+          )
+        })}
       </div>
 
       <div className="admin-content">
@@ -398,84 +594,209 @@ function AdminDashboard() {
 
         {activeTab === 'texts' && (
           <div className="admin-section">
-            <div className="admin-section-header">
-              <h2>{t('admin.manageTexts')}</h2>
-              <button onClick={() => { setEditingText(null); setShowTextForm(true) }} className="admin-add-btn">
-                + {language === 'en' ? 'Add Text' : language === 'it' ? 'Aggiungi Testo' : 'Agregar Texto'}
-              </button>
-            </div>
-            {showTextForm && (
-              <TextForm
-                text={editingText}
-                onClose={() => setShowTextForm(false)}
-                onSave={fetchTexts}
-              />
+            {currentUser && currentUser.role !== 'admin' ? (
+              <div className="admin-access-denied">
+                <p>{language === 'en' ? 'Admin access required' : language === 'it' ? 'Accesso amministratore richiesto' : 'Se requiere acceso de administrador'}</p>
+              </div>
+            ) : (
+              <>
+                <div className="admin-section-header">
+                  <h2>{t('admin.manageTexts')}</h2>
+                  <button onClick={() => { setEditingText(null); setShowTextForm(true) }} className="admin-add-btn">
+                    + {language === 'en' ? 'Add Text' : language === 'it' ? 'Aggiungi Testo' : 'Agregar Texto'}
+                  </button>
+                </div>
+                {showTextForm && (
+                  <TextForm
+                    text={editingText}
+                    onClose={() => setShowTextForm(false)}
+                    onSave={fetchTexts}
+                  />
+                )}
+                <TextsList
+                  texts={texts}
+                  onEdit={(text) => { setEditingText(text); setShowTextForm(true) }}
+                  onDelete={handleDeleteText}
+                />
+              </>
             )}
-            <TextsList
-              texts={texts}
-              onEdit={(text) => { setEditingText(text); setShowTextForm(true) }}
-              onDelete={handleDeleteText}
-            />
           </div>
         )}
 
         {activeTab === 'carousel' && (
           <div className="admin-section">
-            <h2>{t('admin.manageCarousel')}</h2>
-            <CarouselManager artworks={artworks} onUpdate={fetchArtworks} />
+            {requiresAdmin('carousel') ? (
+              <AccessDeniedMessage />
+            ) : (
+              <>
+                <h2>{t('admin.manageCarousel')}</h2>
+                <CarouselManager artworks={artworks} onUpdate={fetchArtworks} />
+              </>
+            )}
           </div>
         )}
 
             {activeTab === 'events' && (
               <div className="admin-section">
-                <div className="admin-section-header">
-                  <h2>{language === 'en' ? 'Manage Portfolio Events' : language === 'it' ? 'Gestisci Eventi del Portfolio' : 'Gestionar Eventos del Portfolio'}</h2>
-                  <button onClick={() => { setEditingEvent(null); setShowEventForm(true) }} className="admin-add-btn">
-                    + {language === 'en' ? 'Add Event' : language === 'it' ? 'Aggiungi Evento' : 'Agregar Evento'}
-                  </button>
-                </div>
-                {showEventForm && (
-                  <EventForm
-                    event={editingEvent}
-                    onClose={() => setShowEventForm(false)}
-                    onSave={fetchEvents}
-                  />
+                {requiresAdmin('events') ? (
+                  <AccessDeniedMessage />
+                ) : (
+                  <>
+                    <div className="admin-section-header">
+                      <h2>{language === 'en' ? 'Manage Portfolio Events' : language === 'it' ? 'Gestisci Eventi del Portfolio' : 'Gestionar Eventos del Portfolio'}</h2>
+                      <button onClick={() => { setEditingEvent(null); setShowEventForm(true) }} className="admin-add-btn">
+                        + {language === 'en' ? 'Add Event' : language === 'it' ? 'Aggiungi Evento' : 'Agregar Evento'}
+                      </button>
+                    </div>
+                    {showEventForm && (
+                      <EventForm
+                        event={editingEvent}
+                        onClose={() => setShowEventForm(false)}
+                        onSave={fetchEvents}
+                      />
+                    )}
+                    <EventsList
+                      events={events}
+                      onEdit={(event) => { setEditingEvent(event); setShowEventForm(true) }}
+                      onDelete={handleDeleteEvent}
+                    />
+                  </>
                 )}
-                <EventsList
-                  events={events}
-                  onEdit={(event) => { setEditingEvent(event); setShowEventForm(true) }}
-                  onDelete={handleDeleteEvent}
-                />
               </div>
             )}
 
             {activeTab === 'categories' && (
               <div className="admin-section">
-                <div className="admin-section-header">
-                  <h2>{language === 'en' ? 'Manage Categories' : language === 'it' ? 'Gestisci Categorie' : 'Gestionar Categorías'}</h2>
-                  <button onClick={() => { setEditingCategory(null); setShowCategoryForm(true) }} className="admin-add-btn">
-                    + {language === 'en' ? 'Add Category' : language === 'it' ? 'Aggiungi Categoria' : 'Agregar Categoría'}
-                  </button>
-                </div>
-                {showCategoryForm && (
-                  <CategoryForm
-                    category={editingCategory}
-                    onClose={() => setShowCategoryForm(false)}
-                    onSave={fetchCategories}
+                {requiresAdmin('categories') ? (
+                  <AccessDeniedMessage />
+                ) : (
+                  <>
+                    <div className="admin-section-header">
+                      <h2>{language === 'en' ? 'Manage Categories' : language === 'it' ? 'Gestisci Categorie' : 'Gestionar Categorías'}</h2>
+                      <button onClick={() => { setEditingCategory(null); setShowCategoryForm(true) }} className="admin-add-btn">
+                        + {language === 'en' ? 'Add Category' : language === 'it' ? 'Aggiungi Categoria' : 'Agregar Categoría'}
+                      </button>
+                    </div>
+                    {showCategoryForm && (
+                      <CategoryForm
+                        category={editingCategory}
+                        onClose={() => setShowCategoryForm(false)}
+                        onSave={fetchCategories}
+                      />
+                    )}
+                    <CategoriesList
+                      categories={categories}
+                      onEdit={(category) => { setEditingCategory(category); setShowCategoryForm(true) }}
+                      onDelete={handleDeleteCategory}
+                    />
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'users' && (
+              <div className="admin-section">
+                {requiresAdmin('users') ? (
+                  <AccessDeniedMessage />
+                ) : (
+                  <>
+                    <div className="admin-section-header">
+                      <h2>{language === 'en' ? 'Manage Users' : language === 'it' ? 'Gestisci Utenti' : 'Gestionar Usuarios'}</h2>
+                      <button onClick={() => { setEditingUser(null); setShowUserForm(true) }} className="admin-add-btn">
+                        + {language === 'en' ? 'Add User' : language === 'it' ? 'Aggiungi Utente' : 'Agregar Usuario'}
+                      </button>
+                    </div>
+                {showUserForm && (
+                  <UserForm
+                    user={editingUser}
+                    currentUser={currentUser}
+                    onClose={() => { setShowUserForm(false); setEditingUser(null) }}
+                    onSave={() => { fetchUsers(); setShowUserForm(false); setEditingUser(null) }}
                   />
                 )}
-                <CategoriesList
-                  categories={categories}
-                  onEdit={(category) => { setEditingCategory(category); setShowCategoryForm(true) }}
-                  onDelete={handleDeleteCategory}
-                />
+                {users.length === 0 ? (
+                  <p>{language === 'en' ? 'No users found' : language === 'it' ? 'Nessun utente trovato' : 'No se encontraron usuarios'}</p>
+                ) : (
+                  <div className="users-list">
+                    {users.map(user => (
+                      <div key={user.id} className="user-item-admin">
+                        <div className="user-details-admin">
+                          <h3>{user.email}</h3>
+                          <p className="user-meta">
+                            {language === 'en' ? 'Role:' : language === 'it' ? 'Ruolo:' : 'Rol:'} {user.role === 'admin' ? (language === 'en' ? 'Admin' : language === 'it' ? 'Amministratore' : 'Administrador') : (language === 'en' ? 'Artwork Manager' : language === 'it' ? 'Gestore Opere' : 'Gestor de Obras')}
+                          </p>
+                          <p className="user-meta">
+                            {language === 'en' ? 'Created:' : language === 'it' ? 'Creato:' : 'Creado:'} {new Date(user.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="user-actions">
+                          <button onClick={() => { setEditingUser(user); setShowUserForm(true) }} className="admin-edit-btn">
+                            {language === 'en' ? 'Edit' : language === 'it' ? 'Modifica' : 'Editar'}
+                          </button>
+                          <button onClick={() => handleDeleteUser(user.id)} className="admin-delete-btn">
+                            {language === 'en' ? 'Delete' : language === 'it' ? 'Elimina' : 'Eliminar'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'logs' && (
+              <div className="admin-section">
+                {requiresAdmin('logs') ? (
+                  <AccessDeniedMessage />
+                ) : (
+                  <>
+                    <div className="admin-section-header">
+                      <h2>{language === 'en' ? 'Audit Logs' : language === 'it' ? 'Registri di Audit' : 'Registros de Auditoría'}</h2>
+                      <button onClick={fetchLogs} className="admin-refresh-btn">
+                        {language === 'en' ? 'Refresh' : language === 'it' ? 'Aggiorna' : 'Actualizar'}
+                      </button>
+                    </div>
+                {logs.length === 0 ? (
+                  <p>{language === 'en' ? 'No logs found' : language === 'it' ? 'Nessun registro trovato' : 'No se encontraron registros'}</p>
+                ) : (
+                  <div className="logs-list">
+                    {logs.map(log => (
+                      <div key={log.id} className="log-item">
+                        <div className="log-header">
+                          <span className="log-action">{log.action}</span>
+                          <span className="log-date">{new Date(log.created_at).toLocaleString()}</span>
+                        </div>
+                        <div className="log-details">
+                          <p className="log-admin">{language === 'en' ? 'Admin:' : language === 'it' ? 'Amministratore:' : 'Administrador:'} {log.admin_email || 'N/A'}</p>
+                          {log.description && <p className="log-description">{log.description}</p>}
+                          {log.resource_type && (
+                            <p className="log-resource">
+                              {language === 'en' ? 'Resource:' : language === 'it' ? 'Risorsa:' : 'Recurso:'} {log.resource_type} {log.resource_id ? `#${log.resource_id}` : ''}
+                            </p>
+                          )}
+                          {log.ip_address && <p className="log-ip">IP: {log.ip_address}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                  </>
+                )}
               </div>
             )}
 
             {activeTab === 'artistProfile' && (
               <div className="admin-section">
-                <h2>{language === 'en' ? 'Artist Photo' : language === 'it' ? 'Foto Artista' : 'Foto del Artista'}</h2>
-                <ArtistProfileManager />
+                {requiresAdmin('artistProfile') ? (
+                  <AccessDeniedMessage />
+                ) : (
+                  <>
+                    <h2>{language === 'en' ? 'Artist Photo' : language === 'it' ? 'Foto Artista' : 'Foto del Artista'}</h2>
+                    <ArtistProfileManager />
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1704,6 +2025,214 @@ function CategoryForm({ category, onClose, onSave }) {
             ))}
           </div>
 
+          <div className="form-actions">
+            <button type="button" onClick={onClose} className="cancel-btn">
+              {language === 'en' ? 'Cancel' : language === 'it' ? 'Annulla' : 'Cancelar'}
+            </button>
+            <button type="submit" disabled={saving} className="save-btn">
+              {saving ? (language === 'en' ? 'Saving...' : language === 'it' ? 'Salvataggio...' : 'Guardando...') : (language === 'en' ? 'Save' : language === 'it' ? 'Salva' : 'Guardar')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function UserForm({ user, onClose, onSave, currentUser: parentCurrentUser }) {
+  const { language } = useLanguage()
+  const [currentUser, setCurrentUser] = useState(parentCurrentUser)
+  const [formData, setFormData] = useState({
+    email: user?.email || '',
+    password: '',
+    password_confirmation: '',
+    role: user?.role || 'artwork_manager'
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    // Update local state if parent currentUser changes
+    if (parentCurrentUser) {
+      setCurrentUser(parentCurrentUser)
+    }
+  }, [parentCurrentUser])
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    })
+    setError('')
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setError('')
+
+    if (formData.password !== formData.password_confirmation) {
+      setError(language === 'en' ? 'Passwords do not match' : language === 'it' ? 'Le password non corrispondono' : 'Las contraseñas no coinciden')
+      setSaving(false)
+      return
+    }
+
+    if (!user && !formData.password) {
+      setError(language === 'en' ? 'Password is required' : language === 'it' ? 'La password è richiesta' : 'La contraseña es requerida')
+      setSaving(false)
+      return
+    }
+
+    if (!user && formData.password !== formData.password_confirmation) {
+      setError(language === 'en' ? 'Passwords do not match' : language === 'it' ? 'Le password non corrispondono' : 'Las contraseñas no coinciden')
+      setSaving(false)
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('adminToken')
+      const payload = {
+        user: {
+          email: formData.email
+        }
+      }
+
+      // For new users, password and password_confirmation are required
+      if (!user) {
+        payload.user.password = formData.password
+        payload.user.password_confirmation = formData.password_confirmation
+      } else if (formData.password) {
+        // For existing users, only include password if it's being changed
+        payload.user.password = formData.password
+        payload.user.password_confirmation = formData.password_confirmation
+      }
+
+      // Only admins can set roles
+      if (currentUser?.role === 'admin') {
+        payload.user.role = formData.role
+      }
+
+      // Only admins can set roles
+      if (currentUser?.role === 'admin') {
+        payload.user.role = formData.role
+      }
+
+      if (user) {
+        await axios.put(`/api/v1/admin/users/${user.id}`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      } else {
+        await axios.post('/api/v1/admin/users', payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      }
+
+      onSave()
+    } catch (error) {
+      console.error('Error saving user:', error)
+      console.error('Error response:', error.response)
+      
+      let errorMessage = language === 'en' ? 'Error saving user' : language === 'it' ? 'Errore nel salvare l\'utente' : 'Error al guardar el usuario'
+      
+      if (error.response) {
+        // Try different error formats
+        if (error.response.data?.errors) {
+          const errors = Array.isArray(error.response.data.errors) 
+            ? error.response.data.errors 
+            : [error.response.data.errors]
+          errorMessage = errors.join(', ')
+        } else if (error.response.data?.error) {
+          errorMessage = error.response.data.error
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data
+        } else if (error.response.status === 500) {
+          errorMessage = language === 'en' 
+            ? 'Server error. Please check the server logs for details.' 
+            : language === 'it' 
+            ? 'Errore del server. Controlla i log del server per i dettagli.'
+            : 'Error del servidor. Por favor revisa los logs del servidor para más detalles.'
+        }
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="artwork-form-overlay">
+      <div className="artwork-form-modal">
+        <div className="artwork-form-header">
+          <h2>{user ? (language === 'en' ? 'Edit User' : language === 'it' ? 'Modifica Utente' : 'Editar Usuario') : (language === 'en' ? 'Add User' : language === 'it' ? 'Aggiungi Utente' : 'Agregar Usuario')}</h2>
+          <button onClick={onClose} className="close-btn">×</button>
+        </div>
+        <form onSubmit={handleSubmit} className="artwork-form">
+          {error && (
+            <div className="error-message" style={{ 
+              color: 'red', 
+              marginBottom: '15px', 
+              padding: '12px', 
+              background: '#ffebee', 
+              border: '1px solid #f44336', 
+              borderRadius: '8px',
+              fontWeight: '600'
+            }}>
+              ⚠ {error}
+            </div>
+          )}
+          <div className="form-group">
+            <label>{language === 'en' ? 'Email' : language === 'it' ? 'Email' : 'Correo Electrónico'}</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder={language === 'en' ? 'user@example.com' : 'usuario@ejemplo.com'}
+            />
+          </div>
+          {currentUser?.role === 'admin' && (
+            <div className="form-group">
+              <label>{language === 'en' ? 'Role' : language === 'it' ? 'Ruolo' : 'Rol'}</label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                required
+              >
+                <option value="admin">{language === 'en' ? 'Admin' : language === 'it' ? 'Amministratore' : 'Administrador'}</option>
+                <option value="artwork_manager">{language === 'en' ? 'Artwork Manager' : language === 'it' ? 'Gestore Opere' : 'Gestor de Obras'}</option>
+              </select>
+            </div>
+          )}
+          <div className="form-group">
+            <label>{language === 'en' ? 'Password' : language === 'it' ? 'Password' : 'Contraseña'}</label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required={!user}
+              placeholder={user ? (language === 'en' ? 'Leave blank to keep current password' : language === 'it' ? 'Lascia vuoto per mantenere la password attuale' : 'Dejar en blanco para mantener la contraseña actual') : ''}
+            />
+          </div>
+          {formData.password && (
+            <div className="form-group">
+              <label>{language === 'en' ? 'Confirm Password' : language === 'it' ? 'Conferma Password' : 'Confirmar Contraseña'}</label>
+              <input
+                type="password"
+                name="password_confirmation"
+                value={formData.password_confirmation}
+                onChange={handleChange}
+                required={!!formData.password}
+              />
+            </div>
+          )}
           <div className="form-actions">
             <button type="button" onClick={onClose} className="cancel-btn">
               {language === 'en' ? 'Cancel' : language === 'it' ? 'Annulla' : 'Cancelar'}

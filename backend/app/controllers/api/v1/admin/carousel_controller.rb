@@ -4,6 +4,7 @@ module Api
       class CarouselController < ApplicationController
         include Authenticatable
         before_action :authenticate_admin
+        before_action :require_admin_role
 
         def index
           @artworks = Artwork.where(in_carousel: true).order(created_at: :desc)

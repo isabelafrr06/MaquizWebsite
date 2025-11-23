@@ -4,6 +4,7 @@ module Api
       class EventsController < ApplicationController
         include Authenticatable
         before_action :authenticate_admin
+        before_action :require_admin_role
 
         def index
           @events = PortfolioEvent.all.order(year: :desc, display_order: :asc, created_at: :desc)

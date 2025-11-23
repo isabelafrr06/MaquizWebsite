@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { getTranslation } from '../utils/translations'
@@ -15,6 +15,15 @@ function AdminLogin() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken')
+    if (token) {
+      // Just redirect if token exists - let the dashboard validate it
+      navigate('/admin/dashboard')
+    }
+  }, [navigate])
 
   const handleChange = (e) => {
     setCredentials({

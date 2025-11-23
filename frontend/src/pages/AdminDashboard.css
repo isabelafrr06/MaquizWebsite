@@ -18,6 +18,12 @@
   z-index: 100;
 }
 
+.admin-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .admin-dashboard-title {
   font-size: 2rem;
   font-weight: 700;
@@ -25,6 +31,24 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.admin-home-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--turquoise) 0%, var(--blue) 50%, var(--violet) 100%);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.admin-home-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(64, 224, 208, 0.3);
 }
 
 .admin-logout-btn {
@@ -75,6 +99,30 @@
 .admin-tab.active {
   background: linear-gradient(135deg, var(--turquoise) 0%, var(--blue) 50%, var(--violet) 100%);
   color: var(--white);
+}
+
+.admin-tab.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.admin-tab.disabled:hover {
+  background: transparent;
+}
+
+.admin-access-denied {
+  padding: 40px;
+  text-align: center;
+  background: var(--gray-light);
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.admin-access-denied p {
+  font-size: 1.2rem;
+  color: var(--gray-dark);
+  font-weight: 600;
 }
 
 .admin-content {
@@ -653,6 +701,111 @@
   display: none;
 }
 
+/* Users List Styles */
+.users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.user-item-admin {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: var(--gray-light);
+  border-radius: 10px;
+  border: 1px solid var(--gray);
+}
+
+.user-details-admin h3 {
+  margin: 0 0 8px 0;
+  color: var(--black);
+  font-size: 1.1rem;
+}
+
+.user-meta {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--gray-dark);
+}
+
+.user-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Logs List Styles */
+.logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.log-item {
+  padding: 15px;
+  background: var(--gray-light);
+  border-radius: 10px;
+  border-left: 4px solid var(--turquoise);
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.log-action {
+  font-weight: 600;
+  color: var(--turquoise);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.log-date {
+  font-size: 0.85rem;
+  color: var(--gray-dark);
+}
+
+.log-details {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.log-admin,
+.log-description,
+.log-resource,
+.log-ip {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--gray-dark);
+}
+
+.log-description {
+  font-weight: 500;
+  color: var(--black);
+}
+
+.admin-refresh-btn {
+  padding: 10px 20px;
+  background: var(--turquoise);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.admin-refresh-btn:hover {
+  background: var(--blue);
+  transform: translateY(-2px);
+}
+
 @media (max-width: 768px) {
   .admin-dashboard {
     padding: 10px;
@@ -768,11 +921,21 @@
     background: var(--gray-light);
   }
 
-  .breadcrumb-menu-item.active {
-    background: linear-gradient(135deg, var(--turquoise) 0%, var(--blue) 50%, var(--violet) 100%);
-    color: var(--white);
-    font-weight: 600;
-  }
+.breadcrumb-menu-item.active {
+  background: linear-gradient(135deg, var(--turquoise) 0%, var(--blue) 50%, var(--violet) 100%);
+  color: var(--white);
+  font-weight: 600;
+}
+
+.breadcrumb-menu-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.breadcrumb-menu-item.disabled:hover {
+  background: var(--white);
+}
 
   .admin-header {
     flex-direction: column;
@@ -791,6 +954,13 @@
     font-size: 1.5rem;
   }
 
+  .admin-header-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .admin-home-btn,
   .admin-logout-btn {
     width: 100%;
     padding: 12px;

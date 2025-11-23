@@ -4,6 +4,7 @@ module Api
       class ArtistProfileController < ApplicationController
         include Authenticatable
         before_action :authenticate_admin
+        before_action :require_admin_role
 
         def show
           profile = ArtistProfile.instance

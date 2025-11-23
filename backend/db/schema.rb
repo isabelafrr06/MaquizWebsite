@@ -47,7 +47,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_22_173200) do
     t.string "password_digest", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "role", default: "admin", null: false
     t.index ["email"], name: "index_admins_on_email", unique: true
+    t.index ["role"], name: "index_admins_on_role"
   end
 
   create_table "artist_profiles", force: :cascade do |t|
@@ -69,6 +71,21 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_22_173200) do
     t.jsonb "translations", default: {}
     t.string "theme"
     t.index ["translations"], name: "index_artworks_on_translations", using: :gin
+  end
+
+  create_table "audit_logs", force: :cascade do |t|
+    t.bigint "admin_id"
+    t.string "action", null: false
+    t.string "resource_type"
+    t.integer "resource_id"
+    t.jsonb "changes", default: {}
+    t.string "ip_address"
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["admin_id"], name: "index_audit_logs_on_admin_id"
+    t.index ["created_at"], name: "index_audit_logs_on_created_at"
+    t.index ["resource_type", "resource_id"], name: "index_audit_logs_on_resource_type_and_resource_id"
   end
 
   create_table "categories", force: :cascade do |t|
@@ -107,4 +124,5 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_22_173200) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "audit_logs", "admins"
 end

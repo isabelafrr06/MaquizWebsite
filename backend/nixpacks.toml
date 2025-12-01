@@ -1,0 +1,9 @@
+[phases.setup]
+nixPkgs = ["nodejs-18_x"]
+
+[phases.install]
+cmds = ["bundle install --jobs=4 --retry=3 --without development test"]
+
+[phases.build]
+cmds = ["echo 'Build phase complete - no database operations here'"]
+

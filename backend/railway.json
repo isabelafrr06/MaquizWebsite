@@ -5,7 +5,7 @@
     "dockerfilePath": "backend/Dockerfile"
   },
   "deploy": {
-    "startCommand": "mkdir -p tmp/pids /data/storage && bundle exec puma -C config/puma.rb",
+    "startCommand": "bash -c 'mkdir -p tmp/pids /data/storage && bundle exec rails db:prepare || exit 1; bundle exec rails db:seed || echo \"Seeds completed with warnings\"; exec bundle exec puma -C config/puma.rb'",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
     "releaseCommand": "bundle exec rails db:prepare && bundle exec rails db:seed || echo 'Seeds completed with warnings'",

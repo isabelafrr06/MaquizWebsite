@@ -9,7 +9,8 @@ Rails.application.configure do
   config.public_file_server.headers = {
     'Cache-Control' => "public, max-age=#{1.year.to_i}"
   }
-  config.force_ssl = true
+  # Railway handles SSL termination, so don't force SSL at the app level
+  config.force_ssl = false
   config.log_level = :info
   config.log_tags = [ :request_id ]
   config.i18n.fallbacks = true

@@ -2,7 +2,8 @@ max_threads_count = ENV.fetch("RAILS_MAX_THREADS") { 5 }
 min_threads_count = ENV.fetch("RAILS_MIN_THREADS") { max_threads_count }
 threads min_threads_count, max_threads_count
 
-port ENV.fetch("PORT") { 3000 }
+# Railway sets PORT automatically, default to 8080 if not set
+port ENV.fetch("PORT") { 8080 }
 environment ENV.fetch("RAILS_ENV") { "development" }
 
 # Only use pidfile in development, Railway manages processes in production
